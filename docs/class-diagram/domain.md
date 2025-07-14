@@ -1,3 +1,6 @@
+1. Class Diagram
+
+- `User`, `Balance`, `Coupon`, `Order`, `Product` 관련 객체 중심 클래스 다이어그램 작성
 
 ```mermaid
 classDiagram
@@ -10,7 +13,7 @@ classDiagram
         +Long userId
         +int balance
     }
-    
+
     class BalanceHistory {
         +Long id
         +Long balanceId
@@ -39,7 +42,7 @@ classDiagram
         +Long id
         +String name
     }
-    
+
     class Option {
         +String code
         +Long productId
