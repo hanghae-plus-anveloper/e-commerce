@@ -14,36 +14,36 @@
     sequenceDiagram
         title 잔액 충전 / 조회 API 시퀀스
         participant User
-        participant BalanceController
+        participant UserController
         participant BalanceService
         participant BalanceRepository
     
         Note over User,BalanceRepository: 잔액 충전 (Charge Balance)
-        User->>BalanceController: POST /users/{userId}/balance<br>Request Body: { "amount": 1000 }
+        User->>UserController: POST /users/{userId}/balance<br>Request Body: { "amount": 1000 }
         alt userId exists and amount valid
-            BalanceController->>BalanceService: charge(userId, amount)
+            UserController->>BalanceService: charge(userId, amount)
             BalanceService->>BalanceRepository: findByUserId(userId)
             BalanceRepository-->>BalanceService: Balance
             BalanceService->>BalanceRepository: save(updatedBalance)
             BalanceRepository-->>BalanceService: savedBalance
-            BalanceService-->>BalanceController: { "userId": 1, "balance": 2500 }
-            BalanceController-->>User: 201 Created<br>Response Body: { "userId": 1, "balance": 2500 }
+            BalanceService-->>UserController: { "userId": 1, "balance": 2500 }
+            UserController-->>User: 201 Created<br>Response Body: { "userId": 1, "balance": 2500 }
         else userId not found
-            BalanceController-->>User: 404 Not Found
+            UserController-->>User: 404 Not Found
         else invalid amount
-            BalanceController-->>User: 400 Bad Request (Invalid amount)
+            UserController-->>User: 400 Bad Request (Invalid amount)
         end
 
         Note over User,BalanceRepository: 잔액 조회 (Get Balance)    
-        User->>BalanceController: GET /users/{userId}/balance
+        User->>UserController: GET /users/{userId}/balance
         alt userId exists
-            BalanceController->>BalanceService: getBalance(userId)
+            UserController->>BalanceService: getBalance(userId)
             BalanceService->>BalanceRepository: findByUserId(userId)
             BalanceRepository-->>BalanceService: Balance
-            BalanceService-->>BalanceController: 2500
-            BalanceController-->>User: 200 OK<br>Response Body: { "balance": 2500 }
+            BalanceService-->>UserController: 2500
+            UserController-->>User: 200 OK<br>Response Body: { "balance": 2500 }
         else userId not found
-            BalanceController-->>User: 404 Not Found
+            UserController-->>User: 404 Not Found
         end
     ```
    
