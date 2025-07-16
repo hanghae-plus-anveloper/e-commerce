@@ -19,8 +19,8 @@ classDiagram
         +int  balance   %% 사용자의 잔액
         +Date updatedAt %% 최근 변경 시간
 
-        +charge(amount: int): void          %% 충전
-        +use(amount: int): void             %% 사용
+        +chargeBalance(amount: int): void          %% 충전
+        +useBalance(amount: int): void             %% 사용
         +getHistory(): List<BalanceHistory> %% 잔액 변동 히스토리
     }
 

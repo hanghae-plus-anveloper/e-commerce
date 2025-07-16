@@ -21,7 +21,7 @@
         Note over User,BalanceRepository: 잔액 충전 (Charge Balance)
         User->>UserController: POST /users/{userId}/balance<br>Request Body: { "amount": 1000 }
         alt userId exists and amount valid
-            UserController->>BalanceService: charge(userId, amount)
+            UserController->>BalanceService: chargeBalance(userId, amount)
             BalanceService->>BalanceRepository: findByUserId(userId)
             BalanceRepository-->>BalanceService: Balance
             BalanceService->>BalanceRepository: save(updatedBalance)
