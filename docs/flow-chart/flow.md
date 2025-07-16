@@ -136,6 +136,11 @@ flowchart TB
     STOCK_OK{모든 재고 충분한가?}
     STOCK_FAIL[주문 실패: 재고 부족]
 
+    %% 쿠폰 분기 및 유효성 검증
+    HAS_COUPON{쿠폰 사용 포함?}
+    COUPON_VALID{쿠폰이 유효한가?}
+    COUPON_INVALID[주문 실패: 유효하지 않은 쿠폰<br>쿠폰 없이 주문하시겠습니까?]
+
     %% 잔액 확인 및 차감
     BALANCE_EXIST{잔액 계정이 존재하는가?}
     BALANCE_NOT_FOUND[주문 실패: 잔액 없음]
@@ -153,8 +158,14 @@ flowchart TB
     USER --> ORDER_REQ --> USER_EXISTS
     USER_EXISTS -- NO --> USER_NOT_FOUND --> USER
     USER_EXISTS -- YES --> CHECK_STOCK --> STOCK_OK
+
     STOCK_OK -- NO --> STOCK_FAIL --> USER
-    STOCK_OK -- YES --> BALANCE_EXIST
+    STOCK_OK -- YES --> HAS_COUPON
+    HAS_COUPON -- NO --> BALANCE_EXIST
+    HAS_COUPON -- YES --> COUPON_VALID
+    COUPON_VALID -- NO --> COUPON_INVALID --> USER
+    COUPON_VALID -- YES --> BALANCE_EXIST
+
     BALANCE_EXIST -- NO --> BALANCE_NOT_FOUND --> USER
     BALANCE_EXIST -- YES --> BALANCE_SUFFICIENT
     BALANCE_SUFFICIENT -- NO --> BALANCE_INSUFFICIENT --> USER
