@@ -164,3 +164,32 @@ flowchart TB
 
 
 ```
+
+### 4. Top 5 인기 상품 조회 (통계 우선, 없으면 주문 집계 + 저장)
+
+```mermaid
+flowchart TB
+    %% 사용자 요청
+    USER[USER<br>사용자]
+    REQ[Top 5 인기 상품 조회 요청]
+
+    %% 사전 통계 조회
+    CHECK_STATS[통계 테이블 조회<br>PRODUCT_SALES_STAT]
+    STATS_EXISTS{최근 3일 통계 존재하는가?}
+    RETURN_STATS[Top5 상품 반환<br>통계 기반]
+
+    %% 집계용 주문 데이터 조회 및 처리
+    QUERY_ORDERS[3일간 주문 정보 조회<br>ORDER_ITEM 기준]
+    AGGREGATE[상품별 수량 집계 및 내림차순 정렬]
+    SAVE_STATS[집계 결과 저장<br>PRODUCT_SALES_STAT INSERT]
+    FIND_PRODUCTS[상품 정보 조회<br>PRODUCT, PRODUCT_OPTION]
+    RETURN_RESULT[Top5 상품 반환<br>주문 기반]
+
+    %% 흐름
+    USER --> REQ --> CHECK_STATS --> STATS_EXISTS
+    STATS_EXISTS -- YES --> RETURN_STATS --> USER
+    STATS_EXISTS -- NO --> QUERY_ORDERS --> AGGREGATE
+    AGGREGATE --> SAVE_STATS
+    AGGREGATE --> FIND_PRODUCTS --> RETURN_RESULT --> USER
+
+```
