@@ -109,14 +109,14 @@ classDiagram
     %% 최소 단위를 일일(혹은 시간대)로 구분해서 기록
     class ProductSalesStat {
         +Long   productId
-        +int    totalSold %% 해당 partition에 판매된 수량
+        +int    soldCount %% 해당 partition에 판매된 수량
         +int    year      %% 연 단위
         +int    month     %% 월 단위
         +int    day       %% 일일 단위
         %% +int   hour      %% 시간대별 판매 통계 추이
         %% +int   weekday   %% 요일별 판매 통계 추이
 
-        +recordSale(quantity: int): void %% productId에 해당하는 totalSold 증가
+        +recordSale(quantity: int): void %% productId에 해당하는 soldCount 증가
     }
     %% 쿼리로 전환 할 것인지? 아니면 캐싱 역할로라도 남길 것인 지?
     %% >> 2주차 과제로는 쿼리 사용
