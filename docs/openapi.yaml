@@ -1,0 +1,396 @@
+openapi: 3.0.1
+info:
+  title: E-Commerce API
+  contact:
+    name: Anveloper
+    email: anveloper.dev@gmail.com
+  version: v1.0.0
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+tags:
+- name: PRODUCT API
+  description: 상품 관련 API 입니다.
+- name: USER API
+  description: 사용자 관련 API 입니다.
+- name: ORDER API
+  description: 주문 및 결제 API 입니다.
+- name: COUPON API
+  description: 선착순 쿠폰 관련 API 입니다.
+- name: 상품 통계 API
+  description: 최근 판매량 기준 상위 상품 조회 API
+paths:
+  /users/{userId}/balance:
+    get:
+      tags:
+      - USER API
+      summary: 잔액 조회
+      description: 사용자의 잔액을 조회합니다.
+      operationId: getBalance
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "404":
+          description: 사용자 ID를 찾을 수 없음
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomErrorResponse"
+        "200":
+          description: 조회 성공
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BalanceResponseDto"
+    post:
+      tags:
+      - USER API
+      summary: 잔액 충전
+      description: 사용자의 잔액을 충전합니다.
+      operationId: chargeBalance
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChargeRequestDto"
+        required: true
+      responses:
+        "404":
+          description: 사용자 ID를 찾을 수 없음
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomErrorResponse"
+        "201":
+          description: 충전 성공
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BalanceResponseDto"
+        "400":
+          description: 잘못된 요청
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomErrorResponse"
+  /orders:
+    post:
+      tags:
+      - ORDER API
+      summary: 주문 생성 및 결제
+      description: 상품을 주문하고 잔액으로 결제를 수행합니다.
+      operationId: createOrder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderRequestDto"
+        required: true
+      responses:
+        "201":
+          description: 주문 성공
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrderResponseDto"
+        "404":
+          description: 사용자 없음
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomErrorResponse"
+        "400":
+          description: 잘못된 요청
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomErrorResponse"
+  /coupons:
+    post:
+      tags:
+      - COUPON API
+      summary: 선착순 쿠폰 발급
+      description: 사용자에게 선착순으로 쿠폰을 발급합니다.
+      operationId: claimCoupon
+      parameters:
+      - name: userId
+        in: query
+        required: true
+        schema:
+          minimum: 1
+          type: integer
+          format: int64
+      responses:
+        "409":
+          description: 쿠폰 소진
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomErrorResponse"
+        "201":
+          description: 쿠폰 발급 성공
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CouponResponseDto"
+  /users/{userId}/coupons:
+    get:
+      tags:
+      - COUPON API
+      summary: 사용자 보유 쿠폰 조회
+      description: 특정 사용자가 보유한 쿠폰 목록을 조회합니다.
+      operationId: getUserCoupons
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          minimum: 1
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: 조회 성공
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CouponResponseDto"
+        "400":
+          description: 잘못된 사용자 ID
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomErrorResponse"
+  /products:
+    get:
+      tags:
+      - PRODUCT API
+      summary: 전체 상품 목록 조회
+      description: 전체 상품 목록과 재고 수량을 반환합니다.
+      operationId: getAllProducts
+      responses:
+        "200":
+          description: 조회 성공
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductResponseDto"
+  /products/{productId}:
+    get:
+      tags:
+      - PRODUCT API
+      summary: 단일 상품 조회
+      description: 상품 ID로 단일 상품을 조회합니다.
+      operationId: getProductById
+      parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "404":
+          description: 상품이 존재하지 않음
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProductResponseDto"
+        "200":
+          description: 조회 성공
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProductResponseDto"
+  /products/top:
+    get:
+      tags:
+      - 상품 통계 API
+      summary: 상위 인기 상품 조회
+      description: 최근 3일간 판매량 기준으로 인기 상품 5개를 조회합니다.
+      operationId: getTopProducts
+      responses:
+        "200":
+          description: 조회 성공
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopProductResponseDto"
+        "500":
+          description: 서버 내부 오류
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CustomErrorResponse"
+components:
+  schemas:
+    ChargeRequestDto:
+      type: object
+      properties:
+        amount:
+          minimum: 1
+          type: integer
+          description: 충전 금액
+          format: int32
+          example: 10000
+      description: 잔액 충전 요청 DTO
+    CustomErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: 에러 메시지
+          example: 사용자를 찾을 수 없습니다.
+        status:
+          type: integer
+          description: HTTP 상태 코드
+          format: int32
+          example: 404
+      description: 에러 응답 객체
+    BalanceResponseDto:
+      type: object
+      properties:
+        userId:
+          type: integer
+          description: 사용자 ID
+          format: int64
+          example: 1
+        balance:
+          type: integer
+          description: 현재 잔액
+          format: int32
+          example: 2500
+      description: 잔액 응답 DTO
+    OrderItemRequestDto:
+      type: object
+      properties:
+        productId:
+          minimum: 1
+          type: integer
+          description: 상품 ID
+          format: int64
+          example: 101
+        quantity:
+          minimum: 1
+          type: integer
+          description: 수량
+          format: int32
+          example: 2
+      description: 주문 항목 DTO
+    OrderRequestDto:
+      type: object
+      properties:
+        userId:
+          minimum: 1
+          type: integer
+          description: 사용자 ID
+          format: int64
+          example: 1
+        items:
+          type: array
+          description: 주문 항목 리스트
+          items:
+            $ref: "#/components/schemas/OrderItemRequestDto"
+        couponId:
+          type: integer
+          description: 쿠폰 ID (선택)
+          format: int64
+          example: 5
+      description: 주문 요청 DTO
+    OrderResponseDto:
+      type: object
+      properties:
+        orderId:
+          type: integer
+          description: 주문 ID
+          format: int64
+          example: 1001
+        totalAmount:
+          type: integer
+          description: 총 결제 금액
+          format: int32
+          example: 20000
+      description: 주문 응답 DTO
+    CouponResponseDto:
+      type: object
+      properties:
+        couponId:
+          type: integer
+          description: 쿠폰 ID
+          format: int64
+          example: 1
+        discount:
+          type: integer
+          description: 할인 금액
+          format: int32
+          example: 1000
+      description: 쿠폰 응답 DTO
+    ProductResponseDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: 상품 ID
+          format: int64
+          example: 1
+        name:
+          type: string
+          description: 상품 이름
+          example: USB-C 충전기
+        price:
+          type: integer
+          description: 상품 가격
+          format: int32
+          example: 19900
+        stock:
+          type: integer
+          description: 잔여 수량
+          format: int32
+          example: 25
+      description: 상품 정보 응답 DTO
+    TopProductResponseDto:
+      type: object
+      properties:
+        productId:
+          type: integer
+          description: 상품 ID
+          format: int64
+          example: 101
+        name:
+          type: string
+          description: 상품명
+          example: 프리미엄 물티슈
+        price:
+          type: integer
+          description: 가격
+          format: int32
+          example: 1500
+        stock:
+          type: integer
+          description: 현재 재고
+          format: int32
+          example: 25
+        soldCount:
+          type: integer
+          description: 최근 3일간 판매량
+          format: int32
+          example: 300
+      description: 상위 인기 상품 응답 DTO
