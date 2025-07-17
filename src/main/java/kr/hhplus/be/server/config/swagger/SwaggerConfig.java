@@ -14,11 +14,10 @@ public class SwaggerConfig {
   public OpenAPI openAPI() {
     return new OpenAPI()
         .info(new Info()
-            .title("HHPLUS User API")
+            .title("E-Commerce API")
             .version("v1.0.0")
-            .description("잔액 조회 및 충전 관련 API 문서입니다.")
             .contact(new Contact()
-                .name("An Seongjin")
-                .email("an.seongjin@example.com")));
+                .name("Anveloper")
+                .email("anveloper.dev@gmail.com")));
   }
 }
