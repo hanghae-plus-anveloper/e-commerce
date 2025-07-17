@@ -12,7 +12,6 @@ public class OrderController implements OrderApi {
 
     @Override
     public ResponseEntity<OrderResponseDto> createOrder(OrderRequestDto request) {
-        // 예외 케이스 (mock 처리)
         if (request.getUserId() <= 0) {
             throw new UserNotFoundException("사용자를 찾을 수 없습니다.");
         }
@@ -21,7 +20,7 @@ public class OrderController implements OrderApi {
             throw new InvalidCouponException("쿠폰이 유효하지 않습니다.");
         }
 
-        int totalAmount = 20000;
+        int totalAmount = 15000;
 
         // mock 잔액, 재고, 쿠폰 확인 생략
         if (totalAmount > 15000) {
