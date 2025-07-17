@@ -26,12 +26,36 @@ public interface OrderApi {
         @ApiResponse(
             responseCode = "400",
             description = "잘못된 요청",
-            content = @Content(schema = @Schema(implementation = CustomErrorResponse.class))
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = CustomErrorResponse.class),
+                examples = @ExampleObject(
+                    name = "잘못된 요청 예시",
+                    value = """
+                    {
+                      "message": "상품 수량은 1 이상이어야 합니다.",
+                      "status": 400
+                    }
+                    """
+                )
+            )
         ),
         @ApiResponse(
             responseCode = "404",
             description = "사용자 없음",
-            content = @Content(schema = @Schema(implementation = CustomErrorResponse.class))
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = CustomErrorResponse.class),
+                examples = @ExampleObject(
+                    name = "사용자 없음 예시",
+                    value = """
+                    {
+                      "message": "사용자를 찾을 수 없습니다.",
+                      "status": 404
+                    }
+                    """
+                )
+            )
         )
     })
     @PostMapping

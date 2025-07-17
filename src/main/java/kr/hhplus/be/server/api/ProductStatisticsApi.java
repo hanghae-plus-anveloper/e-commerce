@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.hhplus.be.server.dto.TopProductResponseDto;
-import kr.hhplus.be.server.dto.CustomErrorResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,11 +22,6 @@ public interface ProductStatisticsApi {
             responseCode = "200",
             description = "조회 성공",
             content = @Content(array = @ArraySchema(schema = @Schema(implementation = TopProductResponseDto.class)))
-        ),
-        @ApiResponse(
-            responseCode = "500",
-            description = "서버 내부 오류",
-            content = @Content(schema = @Schema(implementation = CustomErrorResponse.class))
         )
     })
     @GetMapping("/top")

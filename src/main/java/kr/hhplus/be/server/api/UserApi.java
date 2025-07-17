@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.api;
 
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,12 +28,18 @@ public interface UserApi {
         @ApiResponse(
             responseCode = "200",
             description = "조회 성공",
-            content = @Content(schema = @Schema(implementation = BalanceResponseDto.class))
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = BalanceResponseDto.class)
+            )
         ),
         @ApiResponse(
             responseCode = "404",
             description = "사용자 ID를 찾을 수 없음",
-            content = @Content(schema = @Schema(implementation = CustomErrorResponse.class))
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = CustomErrorResponse.class)
+            )
         )
     })
     @GetMapping("/{userId}/balance")
@@ -43,17 +50,34 @@ public interface UserApi {
         @ApiResponse(
             responseCode = "201",
             description = "충전 성공",
-            content = @Content(schema = @Schema(implementation = BalanceResponseDto.class))
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = BalanceResponseDto.class))
         ),
         @ApiResponse(
             responseCode = "400",
             description = "잘못된 요청",
-            content = @Content(schema = @Schema(implementation = CustomErrorResponse.class))
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = CustomErrorResponse.class),
+                examples = @ExampleObject(
+                    name = "잘못된 요청 예시",
+                    value = """
+                    {
+                      "message": "충전 금액은 1 이상이어야 합니다.",
+                      "status": 400
+                    }
+                    """
+                )
+            )
         ),
         @ApiResponse(
             responseCode = "404",
             description = "사용자 ID를 찾을 수 없음",
-            content = @Content(schema = @Schema(implementation = CustomErrorResponse.class))
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = CustomErrorResponse.class)
+            )
         )
     })
     @PostMapping("/{userId}/balance")

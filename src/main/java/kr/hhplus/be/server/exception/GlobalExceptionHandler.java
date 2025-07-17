@@ -33,8 +33,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(CouponSoldOutException.class)
-    public ResponseEntity<Object> handleCouponSoldOut(CouponSoldOutException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", ex.getMessage()));
+    public ResponseEntity<CustomErrorResponse> handleCouponSoldOut(CouponSoldOutException ex) {
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(new CustomErrorResponse(ex.getMessage(), HttpStatus.CONFLICT.value()));
     }
 
     @ExceptionHandler({InsufficientBalanceException.class, InvalidCouponException.class})
