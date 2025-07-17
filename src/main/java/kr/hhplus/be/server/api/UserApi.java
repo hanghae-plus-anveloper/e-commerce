@@ -24,20 +24,41 @@ public interface UserApi {
 
     @Operation(summary = "잔액 조회", description = "사용자의 잔액을 조회합니다.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "조회 성공", content = @Content(schema = @Schema(implementation = BalanceResponseDto.class))),
-            @ApiResponse(responseCode = "404", description = "사용자 ID를 찾을 수 없음", content = @Content(schema = @Schema(implementation = CustomErrorResponse.class)))
+        @ApiResponse(
+            responseCode = "200",
+            description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = BalanceResponseDto.class))
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "사용자 ID를 찾을 수 없음",
+            content = @Content(schema = @Schema(implementation = CustomErrorResponse.class))
+        )
     })
     @GetMapping("/{userId}/balance")
     ResponseEntity<BalanceResponseDto> getBalance(@PathVariable Long userId);
 
     @Operation(summary = "잔액 충전", description = "사용자의 잔액을 충전합니다.")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "충전 성공", content = @Content(schema = @Schema(implementation = BalanceResponseDto.class))),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청", content = @Content(schema = @Schema(implementation = CustomErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "사용자 ID를 찾을 수 없음", content = @Content(schema = @Schema(implementation = CustomErrorResponse.class)))
+        @ApiResponse(
+            responseCode = "201",
+            description = "충전 성공",
+            content = @Content(schema = @Schema(implementation = BalanceResponseDto.class))
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "잘못된 요청",
+            content = @Content(schema = @Schema(implementation = CustomErrorResponse.class))
+        ),
+        @ApiResponse(
+            responseCode = "404",
+            description = "사용자 ID를 찾을 수 없음",
+            content = @Content(schema = @Schema(implementation = CustomErrorResponse.class))
+        )
     })
     @PostMapping("/{userId}/balance")
     ResponseEntity<BalanceResponseDto> chargeBalance(
-            @PathVariable Long userId,
-            @Valid @RequestBody ChargeRequestDto request);
+        @PathVariable Long userId,
+        @Valid @RequestBody ChargeRequestDto request
+    );
 }
