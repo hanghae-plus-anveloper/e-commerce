@@ -35,18 +35,18 @@ paths:
           type: integer
           format: int64
       responses:
-        "404":
-          description: 사용자 ID를 찾을 수 없음
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/CustomErrorResponse"
         "200":
           description: 조회 성공
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: "#/components/schemas/BalanceResponseDto"
+        "404":
+          description: 사용자 ID를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomErrorResponse"
     post:
       tags:
       - USER API
@@ -67,22 +67,28 @@ paths:
               $ref: "#/components/schemas/ChargeRequestDto"
         required: true
       responses:
-        "404":
-          description: 사용자 ID를 찾을 수 없음
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/CustomErrorResponse"
         "201":
           description: 충전 성공
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: "#/components/schemas/BalanceResponseDto"
         "400":
           description: 잘못된 요청
           content:
-            '*/*':
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomErrorResponse"
+              examples:
+                잘못된 요청 예시:
+                  description: 잘못된 요청 예시
+                  value:
+                    message: 충전 금액은 1 이상이어야 합니다.
+                    status: 400
+        "404":
+          description: 사용자 ID를 찾을 수 없음
+          content:
+            application/json:
               schema:
                 $ref: "#/components/schemas/CustomErrorResponse"
   /orders:
@@ -108,15 +114,27 @@ paths:
         "404":
           description: 사용자 없음
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: "#/components/schemas/CustomErrorResponse"
+              examples:
+                사용자 없음 예시:
+                  description: 사용자 없음 예시
+                  value:
+                    message: 사용자를 찾을 수 없습니다.
+                    status: 404
         "400":
           description: 잘못된 요청
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: "#/components/schemas/CustomErrorResponse"
+              examples:
+                잘못된 요청 예시:
+                  description: 잘못된 요청 예시
+                  value:
+                    message: 상품 수량은 1 이상이어야 합니다.
+                    status: 400
   /coupons:
     post:
       tags:
@@ -136,13 +154,39 @@ paths:
         "409":
           description: 쿠폰 소진
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: "#/components/schemas/CustomErrorResponse"
+              examples:
+                쿠폰 소진 예시:
+                  summary: 쿠폰 소진
+                  description: 모든 쿠폰이 이미 발급된 경우
+                  value:
+                    message: 쿠폰이 모두 소진되었습니다.
+                    status: 409
+        "400":
+          description: 잘못된 요청
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomErrorResponse"
+              examples:
+                잘못된 사용자 ID:
+                  summary: userId가 0 이하
+                  description: 잘못된 사용자 ID
+                  value:
+                    message: userId는 1 이상이어야 합니다.
+                    status: 400
+                쿠폰 ID 누락:
+                  summary: couponId가 없음
+                  description: 쿠폰 ID 누락
+                  value:
+                    message: couponId는 필수입니다.
+                    status: 400
         "201":
           description: 쿠폰 발급 성공
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: "#/components/schemas/CouponResponseDto"
   /users/{userId}/coupons:
@@ -161,6 +205,18 @@ paths:
           type: integer
           format: int64
       responses:
+        "404":
+          description: 사용자 없음
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomErrorResponse"
+              examples:
+                사용자 없음 예시:
+                  description: 사용자 없음 예시
+                  value:
+                    message: 사용자를 찾을 수 없습니다.
+                    status: 404
         "200":
           description: 조회 성공
           content:
@@ -169,12 +225,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/CouponResponseDto"
-        "400":
-          description: 잘못된 사용자 ID
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/CustomErrorResponse"
   /products:
     get:
       tags:
@@ -183,6 +233,18 @@ paths:
       description: 전체 상품 목록과 재고 수량을 반환합니다.
       operationId: getAllProducts
       responses:
+        "404":
+          description: 상품이 존재하지 않음
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomErrorResponse"
+              examples:
+                상품 없음 예시:
+                  description: 상품 없음 예시
+                  value:
+                    message: 상품을 찾을 수 없습니다.
+                    status: 404
         "200":
           description: 조회 성공
           content:
@@ -209,9 +271,15 @@ paths:
         "404":
           description: 상품이 존재하지 않음
           content:
-            '*/*':
+            application/json:
               schema:
-                $ref: "#/components/schemas/ProductResponseDto"
+                $ref: "#/components/schemas/CustomErrorResponse"
+              examples:
+                상품 없음 예시:
+                  description: 상품 없음 예시
+                  value:
+                    message: 상품을 찾을 수 없습니다.
+                    status: 404
         "200":
           description: 조회 성공
           content:
@@ -234,12 +302,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/TopProductResponseDto"
-        "500":
-          description: 서버 내부 오류
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/CustomErrorResponse"
 components:
   schemas:
     ChargeRequestDto:
@@ -252,19 +314,6 @@ components:
           format: int32
           example: 10000
       description: 잔액 충전 요청 DTO
-    CustomErrorResponse:
-      type: object
-      properties:
-        message:
-          type: string
-          description: 에러 메시지
-          example: 사용자를 찾을 수 없습니다.
-        status:
-          type: integer
-          description: HTTP 상태 코드
-          format: int32
-          example: 404
-      description: 에러 응답 객체
     BalanceResponseDto:
       type: object
       properties:
@@ -279,6 +328,19 @@ components:
           format: int32
           example: 2500
       description: 잔액 응답 DTO
+    CustomErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: 에러 메시지
+          example: 사용자를 찾을 수 없습니다.
+        status:
+          type: integer
+          description: HTTP 상태 코드
+          format: int32
+          example: 404
+      description: 에러 응답 객체
     OrderItemRequestDto:
       type: object
       properties:
