@@ -1,12 +1,12 @@
 package kr.hhplus.be.server.controller;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
+
 import kr.hhplus.be.server.api.UserApi;
 import kr.hhplus.be.server.dto.BalanceResponseDto;
 import kr.hhplus.be.server.dto.ChargeRequestDto;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
