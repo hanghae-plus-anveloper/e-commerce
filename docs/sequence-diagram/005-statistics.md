@@ -27,7 +27,7 @@
         ProductStatisticsService->>ProductRepository: findProductsByIds(top5ProductIds)
         ProductRepository-->>ProductStatisticsService: [Product]
         ProductStatisticsService-->>ProductAPI: [Top5ProductResponse]
-        ProductController-->>User: 200 OK<br>Response Body: [ { id, name, price, stock }, ... ]
+        ProductController-->>User: 200 OK<br>Response Body: [ { id, name, price, stock, soldCount }, ... ]
     ```
 
     - 사전 집계 기반 상위 상품 조회 API 시퀀스
@@ -50,5 +50,5 @@
         ProductStatisticsService->>ProductRepository: findProductsByIds([productIds])
         ProductRepository-->>ProductStatisticsService: [Product]
         ProductStatisticsService-->>ProductController: [Top5ProductResponse]
-        ProductController-->>User: 200 OK<br>Response Body: [ { id, name, price, stock }, ... ] 
+        ProductController-->>User: 200 OK<br>Response Body: [ { id, name, price, stock, soldCount }, ... ] 
     ```
