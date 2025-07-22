@@ -17,9 +17,9 @@
        participant User
        participant OrderController
        participant OrderService
-       participant BalanceService
        participant ProductService
        participant CouponService
+       participant BalanceService
        participant OrderRepository
        participant ExternalPlatformClient
 
@@ -31,16 +31,7 @@
            OrderService-->>OrderController: throw UserNotFoundException
            OrderController-->>User: 404 Not Found
        end
-
-       Note over OrderService,BalanceService: 잔액 확인
-       OrderService->>BalanceService: verifyAndDeductBalance(userId, totalAmount)
-       alt 잔액 부족
-           BalanceService-->>OrderService: throw InsufficientBalanceException
-           OrderService-->>OrderController: 400 Bad Request
-           OrderController-->>User: 400 Bad Request (잔액 부족)
-       end
-
-
+      
        Note over OrderService,ProductService: 상품별 재고 확인
        loop for each item
            OrderService->>ProductService: verifyAndDeductStock(productId, quantity)
@@ -49,17 +40,34 @@
                OrderService-->>OrderController: 400 Bad Request
                OrderController-->>User: 400 Bad Request (재고 부족)
            end
-       end
-
-       Note over OrderService,CouponService: 쿠폰 사용시, 쿠폰 유효성 확인
+       end      
+      
+       Note over OrderService: 상품 총액 계산
+       OrderService->>OrderService: totalAmount = sum(items.price * items.quantity)
+        
+       Note over OrderService,CouponService: 쿠폰 적용 여부 확인
        alt 쿠폰 사용 포함
-           OrderService->>CouponService: applyCoupon(userId, couponId)
-           alt 유효하지 않음
+           OrderService->>CouponService: applyCoupon(userId, couponId, totalAmount)
+           alt 쿠폰 유효하지 않음
                CouponService-->>OrderService: throw InvalidCouponException
                OrderService-->>OrderController: 400 Bad Request
                OrderController-->>User: 400 Bad Request (쿠폰 오류)
+           else 유효함
+               CouponService-->>OrderService: 할인 금액 반환 (discountAmount)
+               OrderService->>OrderService: finalAmount = totalAmount - discountAmount
            end
+       else 쿠폰 없음
+           OrderService->>OrderService: finalAmount = totalAmount
        end
+   
+       Note over OrderService,BalanceService: 최종 결제 금액 기준 잔액 확인 및 차감
+       OrderService->>BalanceService: verifyAndDeductBalance(userId, finalAmount)
+       alt 잔액 부족
+           BalanceService-->>OrderService: throw InsufficientBalanceException
+           OrderService-->>OrderController: 400 Bad Request
+           OrderController-->>User: 400 Bad Request (잔액 부족)
+       end
+
 
        OrderService->>OrderRepository: save(order)
        OrderRepository-->>OrderService: savedOrder
