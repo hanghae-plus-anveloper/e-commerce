@@ -2,6 +2,7 @@ package kr.hhplus.be.server.domain.user;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import kr.hhplus.be.server.domain.balance.Balance;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 

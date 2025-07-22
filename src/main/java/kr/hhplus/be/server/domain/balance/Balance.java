@@ -1,8 +1,9 @@
-package kr.hhplus.be.server.domain.user;
+package kr.hhplus.be.server.domain.balance;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import kr.hhplus.be.server.domain.user.User;
 import lombok.Getter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;

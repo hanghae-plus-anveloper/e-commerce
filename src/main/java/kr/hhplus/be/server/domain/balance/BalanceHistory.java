@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.domain.user;
+package kr.hhplus.be.server.domain.balance;
 
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
