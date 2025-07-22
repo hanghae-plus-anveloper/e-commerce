@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.api;
+package kr.hhplus.be.server.controller.user;
 
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import org.springframework.http.ResponseEntity;
@@ -15,9 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import kr.hhplus.be.server.dto.BalanceResponseDto;
-import kr.hhplus.be.server.dto.ChargeRequestDto;
-import kr.hhplus.be.server.dto.CustomErrorResponse;
+import kr.hhplus.be.server.dto.common.CustomErrorResponse;
 
 @Tag(name = "USER API", description = "사용자 관련 API 입니다.")
 @RequestMapping("/users")

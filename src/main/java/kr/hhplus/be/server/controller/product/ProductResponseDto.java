@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.dto;
+package kr.hhplus.be.server.controller.product;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;

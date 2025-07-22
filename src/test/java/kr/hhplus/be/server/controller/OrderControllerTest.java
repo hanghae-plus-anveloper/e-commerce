@@ -1,9 +1,9 @@
 package kr.hhplus.be.server.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import kr.hhplus.be.server.dto.OrderItemRequestDto;
-import kr.hhplus.be.server.dto.OrderRequestDto;
-import kr.hhplus.be.server.dto.OrderResponseDto;
+import kr.hhplus.be.server.controller.order.OrderController;
+import kr.hhplus.be.server.controller.order.OrderItemRequestDto;
+import kr.hhplus.be.server.controller.order.OrderRequestDto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

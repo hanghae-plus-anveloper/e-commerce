@@ -1,12 +1,11 @@
-package kr.hhplus.be.server.api;
+package kr.hhplus.be.server.controller.coupon;
 
 import io.swagger.v3.oas.annotations.*;
 import io.swagger.v3.oas.annotations.media.*;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Min;
-import kr.hhplus.be.server.dto.CouponResponseDto;
-import kr.hhplus.be.server.dto.CustomErrorResponse;
+import kr.hhplus.be.server.dto.common.CustomErrorResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
