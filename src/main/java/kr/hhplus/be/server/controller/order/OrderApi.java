@@ -1,8 +1,6 @@
-package kr.hhplus.be.server.api;
+package kr.hhplus.be.server.controller.order;
 
-import kr.hhplus.be.server.dto.OrderRequestDto;
-import kr.hhplus.be.server.dto.OrderResponseDto;
-import kr.hhplus.be.server.dto.CustomErrorResponse;
+import kr.hhplus.be.server.dto.common.CustomErrorResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.Operation;

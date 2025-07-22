@@ -1,7 +1,5 @@
-package kr.hhplus.be.server.controller;
+package kr.hhplus.be.server.controller.coupon;
 
-import kr.hhplus.be.server.api.CouponApi;
-import kr.hhplus.be.server.dto.CouponResponseDto;
 import kr.hhplus.be.server.exception.CouponSoldOutException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;

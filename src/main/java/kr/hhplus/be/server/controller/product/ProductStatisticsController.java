@@ -1,7 +1,5 @@
-package kr.hhplus.be.server.controller;
+package kr.hhplus.be.server.controller.product;
 
-import kr.hhplus.be.server.api.ProductStatisticsApi;
-import kr.hhplus.be.server.dto.TopProductResponseDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
