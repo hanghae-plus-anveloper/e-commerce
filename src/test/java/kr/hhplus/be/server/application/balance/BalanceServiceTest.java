@@ -6,6 +6,7 @@ import kr.hhplus.be.server.domain.balance.BalanceChangeType;
 import kr.hhplus.be.server.domain.balance.BalanceRepository;
 import kr.hhplus.be.server.domain.user.User;
 import kr.hhplus.be.server.domain.user.UserRepository;
+import kr.hhplus.be.server.exception.InsufficientBalanceException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -62,5 +63,20 @@ public class BalanceServiceTest {
         assertThat(user.getBalance().getBalance()).isEqualTo(700);
         assertThat(user.getBalance().getHistories()).hasSize(1);
         assertThat(user.getBalance().getHistories().get(0).getType()).isEqualTo(BalanceChangeType.USE);
+    }
+
+    @Test
+    @DisplayName("잔액 부족 시 IllegalArgumentException이 발생한다")
+    void useBalance_insufficient() {
+        User user = new User("테스트유저");
+        user.setId(1L);
+        Balance balance = new Balance(user, 100);
+        user.setBalance(balance);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> balanceService.useBalance(1L, 300))
+                .isInstanceOf(InsufficientBalanceException.class)
+                .hasMessageContaining("잔액이 부족합니다.");
     }
 }
