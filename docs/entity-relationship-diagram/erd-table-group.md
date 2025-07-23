@@ -57,7 +57,7 @@ erDiagram
     ORDER_ITEM {
         LONG    id PK
         LONG    order_id FK             "[ORDER.id] INDEX"
-        STRING  product_option_code FK  "[PRODUCT_OPTION.code] INDEX"
+        LONG    product_id FK           "[PRODUCT.id] INDEX"
         %% 주문 시와 현재 상품 금액과 다를 수 있음
         INT     price                   "주문 시 금액 단가"
         INT     quantity                "주문 수량"
@@ -68,14 +68,8 @@ erDiagram
     PRODUCT {
         LONG    id PK
         STRING  name    "상품명"
-    }
-
-    PRODUCT_OPTION {
-        STRING  code PK
-        STRING  name            "상품 옵션명"
-        LONG    product_id FK   "[PRODUCT.id] INDEX"
-        INT     price           "상품 단가(공급가액)"
-        INT     stock           "옵션 별 재고"
+        INT     price   "상품 단가(공급가액)"
+        INT     stock   "상품 별 재고"
     }
     
     %% 상품 기준 사전 집계 혹은 요청 시 1회 집계 후 재사용
@@ -96,8 +90,7 @@ erDiagram
     COUPON }o--|| COUPON_POLICY : "정책 기준"
     USER ||--o{ ORDER : "주문"
     ORDER ||--o{ ORDER_ITEM : "포함"
-    ORDER_ITEM }o--|| PRODUCT_OPTION : "옵션 참조"
-    PRODUCT ||--o{ PRODUCT_OPTION : "옵션 구성"
+    ORDER_ITEM }o--|| PRODUCT : "옵션 참조"
     PRODUCT ||--o{ PRODUCT_SALES_STAT : "판매 통계"
 
 ```
@@ -124,7 +117,6 @@ flowchart TD
 
   subgraph ProductDomain["도메인: 상품"]
     PRODUCT
-    PRODUCT_OPTION
     PRODUCT_SALES_STAT
   end
 
@@ -134,8 +126,7 @@ flowchart TD
   COUPON --> COUPON_POLICY
   USER --> ORDER
   ORDER --> ORDER_ITEM
-  ORDER_ITEM --> PRODUCT_OPTION
-  PRODUCT --> PRODUCT_OPTION
+  ORDER_ITEM --> PRODUCT
   PRODUCT --> PRODUCT_SALES_STAT
 
 ```
@@ -206,7 +197,7 @@ erDiagram
     ORDER_ITEM {
         LONG    id PK
         LONG    order_id FK             "[ORDER.id] INDEX"
-        STRING  product_option_code FK  "[PRODUCT_OPTION.code] INDEX"
+        LONG    product_id FK           "[PRODUCT.id] INDEX"
         %% 주문 시와 현재 상품 금액과 다를 수 있음
         INT     price                   "주문 시 금액 단가"
         INT     quantity                "주문 수량"
@@ -221,17 +212,11 @@ erDiagram
     PRODUCT {
         LONG    id PK
         STRING  name    "상품명"
+        INT     price   "상품 단가(공급가액)"
+        INT     stock   "상품 별 재고"
     }
 
-    PRODUCT_OPTION {
-        STRING  code PK
-        STRING  name            "상품 옵션명"
-        LONG    product_id FK   "[PRODUCT.id] INDEX"
-        INT     price           "상품 단가(공급가액)"
-        INT     stock           "옵션 별 재고"
-    }
-
-%% 상품 기준 사전 집계 혹은 요청 시 1회 집계 후 재사용
+    %% 상품 기준 사전 집계 혹은 요청 시 1회 집계 후 재사용
     PRODUCT_SALES_STAT {
         LONG    product_id FK   "[PRODUCT.id] INDEX"
         INT     year

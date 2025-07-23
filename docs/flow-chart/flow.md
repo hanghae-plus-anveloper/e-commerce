@@ -13,7 +13,6 @@ flowchart TD
     ORDER[ORDER<br>주문]
     ORDER_ITEM[ORDER_ITEM<br>주문 상세]
     PRODUCT[PRODUCT<br>상품]
-    PRODUCT_OPTION[PRODUCT_OPTION<br>상품 옵션]
 
     USER -->|"충전/조회/사용"| BALANCE
     BALANCE -->|"기록"| BALANCE_HISTORY
@@ -21,8 +20,7 @@ flowchart TD
     COUPON -->|"정책"| COUPON_POLICY
     USER -->|"주문/결제"| ORDER
     ORDER -->|"포함"| ORDER_ITEM
-    ORDER_ITEM -->|"대상/차감"| PRODUCT_OPTION
-    PRODUCT -->|"구성"| PRODUCT_OPTION
+    ORDER_ITEM -->|"대상/차감"| PRODUCT
 
     BALANCE --> |"충전/사용 실패"| USER
     COUPON -->|"발급/사용 실패, 만료"| USER

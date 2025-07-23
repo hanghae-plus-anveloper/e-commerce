@@ -78,7 +78,7 @@ classDiagram
     class OrderItem {
         +Long   id
         +Long   orderId
-        +String productOptionCode %% 상품 옵션 코드
+        +String productId         %% 상품 ID
         +int    price             %% 구매 시 단가
         +int    quantity          %% 구매 수량
         +int    discountAmount    %% 적용된 할인
@@ -87,22 +87,14 @@ classDiagram
     }
 
     class Product {
-        +Long   id   %% 상품 id, >> productId
-        +String name %% 상품명
-
-        +getOptions(): List<ProductOption>
-    }
-
-    class ProductOption {
-        +String code      %% 옵션 코드, Stock Keeping Unit 과 같이 고유한 코드 값
-        +String name      %% 옵션명
-        +Long   productId
+        +Long   id        %% 상품 id, >> productId
+        +String name      %% 상품명
         +int    price     %% 상품 단가
         +int    stock     %% 재고
 
         +deductStock(quantity: int): void            %% 재고 차감
         +increaseStock(quantity: int): void          %% 재고 증가(재고 보충, 환불, 결제 취소)
-        +isStockAvailable(quantity: int): boolean    %% 재고 가능 여부 확인
+        +isStockAvailable(quantity: int): boolean    %% 재고 가능 여부 확인        
     }
 
     %% 상품 판매 통계
@@ -126,8 +118,7 @@ classDiagram
     User "1" --> "*" Coupon : 보유
     User "1" --> "*" Order : 주문
     Order "1" --> "*" OrderItem : 포함
-    OrderItem "1" --> "1" ProductOption : 대상
-    Product "1" --> "*" ProductOption : 구성
+    OrderItem "1" --> "1" Product : 대상
     Coupon "1" --> "1" CouponPolicy : 정책
 
 ```
