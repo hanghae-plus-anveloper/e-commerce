@@ -23,8 +23,13 @@ public class GlobalExceptionHandler {
         for (FieldError fieldError : ex.getBindingResult().getFieldErrors()) {
             errors.put(fieldError.getField(), fieldError.getDefaultMessage());
         }
+        String firstErrorMessage = ex.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(FieldError::getDefaultMessage)
+                .orElse("유효하지 않은 요청입니다.");
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "유효하지 않은 요청입니다.", "errors", errors));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new CustomErrorResponse(firstErrorMessage, HttpStatus.BAD_REQUEST.value()));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
