@@ -45,4 +45,22 @@ public class BalanceServiceTest {
         assertThat(user.getBalance().getHistories()).hasSize(1);
         assertThat(user.getBalance().getHistories().get(0).getType()).isEqualTo(BalanceChangeType.CHARGE);
     }
+
+    @Test
+    @DisplayName("잔액 사용 시 잔액이 감소하고 히스토리가 기록된다")
+    void useBalance() {
+        User user = new User("테스트유저");
+        user.setId(1L);
+        Balance balance = new Balance(user, 1000);
+        user.setBalance(balance);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(balanceRepository.save(any(Balance.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        balanceService.useBalance(1L, 300);
+
+        assertThat(user.getBalance().getBalance()).isEqualTo(700);
+        assertThat(user.getBalance().getHistories()).hasSize(1);
+        assertThat(user.getBalance().getHistories().get(0).getType()).isEqualTo(BalanceChangeType.USE);
+    }
 }
