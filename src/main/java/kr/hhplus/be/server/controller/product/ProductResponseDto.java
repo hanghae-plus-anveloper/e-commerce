@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.controller.product;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import kr.hhplus.be.server.domain.product.Product;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -19,4 +20,13 @@ public class ProductResponseDto {
 
     @Schema(description = "잔여 수량", example = "25")
     private int stock;
+
+    public static ProductResponseDto from(Product product) {
+        return new ProductResponseDto(
+                product.getId(),
+                product.getName(),
+                product.getPrice(),
+                product.getStock()
+        );
+    }
 }
