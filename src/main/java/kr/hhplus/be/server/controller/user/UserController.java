@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.controller.user;
 
+import kr.hhplus.be.server.facade.user.UserFacade;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -9,21 +10,18 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserController implements UserApi {
 
+    private final UserFacade userFacade;
+
     @Override
     public ResponseEntity<BalanceResponseDto> getBalance(Long userId) {
-        return ResponseEntity.ok(new BalanceResponseDto(userId, 5000));
+        BalanceResponseDto balance = userFacade.getBalance(userId);
+        return ResponseEntity.ok(balance);
     }
 
     @Override
     public ResponseEntity<BalanceResponseDto> chargeBalance(Long userId, ChargeRequestDto request) {
-        if (userId <= 0 || request.getAmount() < 1) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        int currentBalance = 1500;
-        int newBalance = currentBalance + request.getAmount();
-
-        return ResponseEntity.status(201)
-                .body(new BalanceResponseDto(userId, newBalance));
+        userFacade.chargeBalance(userId, request.getAmount());
+        BalanceResponseDto balance = userFacade.getBalance(userId);
+        return ResponseEntity.status(201).body(balance);
     }
 }

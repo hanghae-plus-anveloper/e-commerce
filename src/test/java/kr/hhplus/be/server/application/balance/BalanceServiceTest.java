@@ -66,7 +66,7 @@ public class BalanceServiceTest {
     }
 
     @Test
-    @DisplayName("잔액 부족 시 IllegalArgumentException이 발생한다")
+    @DisplayName("잔액 부족 시 InsufficientBalanceException이 발생한다")
     void useBalance_insufficient() {
         User user = new User("테스트유저");
         user.setId(1L);
