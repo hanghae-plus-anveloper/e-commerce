@@ -3,9 +3,11 @@ package kr.hhplus.be.server.domain.balance;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
+import lombok.Getter;
 
 import java.time.LocalDateTime;
 
+@Getter
 @Entity
 @Table(name = "BALANCE_HISTORY")
 public class BalanceHistory {

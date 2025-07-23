@@ -14,13 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class BalanceService {
 
-    private final UserRepository userRepository;
     private final BalanceRepository balanceRepository;
 
     @Transactional
-    public void chargeBalance(Long userId, int amount) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+    public void chargeBalance(User user, int amount) {
 
         Balance balance = user.getBalance();
         if (balance == null) {
@@ -33,9 +30,7 @@ public class BalanceService {
     }
 
     @Transactional
-    public void useBalance(Long userId, int amount) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다."));
+    public void useBalance(User user, int amount) {
 
         Balance balance = user.getBalance();
         if (balance == null || balance.getBalance() < amount) {

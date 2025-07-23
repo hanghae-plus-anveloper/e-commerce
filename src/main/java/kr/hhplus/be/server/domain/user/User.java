@@ -12,9 +12,11 @@ import java.time.format.DateTimeFormatter;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @Table(name = "USER")
 public class User {
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,7 +25,6 @@ public class User {
     @Column(nullable = false)
     private String name;
 
-    @Setter
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private Balance balance;
