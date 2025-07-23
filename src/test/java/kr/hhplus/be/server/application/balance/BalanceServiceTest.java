@@ -26,7 +26,7 @@ public class BalanceServiceTest {
     void setUp() {
         balanceRepository = mock(BalanceRepository.class);
         userRepository = mock(UserRepository.class);
-        balanceService = new BalanceService(userRepository, balanceRepository);
+        balanceService = new BalanceService(balanceRepository);
     }
 
     @Test
@@ -40,7 +40,7 @@ public class BalanceServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(balanceRepository.save(any(Balance.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        balanceService.chargeBalance(1L, 500);
+        balanceService.chargeBalance(user, 500);
 
         assertThat(user.getBalance().getBalance()).isEqualTo(1500);
         assertThat(user.getBalance().getHistories()).hasSize(1);
@@ -58,7 +58,7 @@ public class BalanceServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(balanceRepository.save(any(Balance.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        balanceService.useBalance(1L, 300);
+        balanceService.useBalance(user, 300);
 
         assertThat(user.getBalance().getBalance()).isEqualTo(700);
         assertThat(user.getBalance().getHistories()).hasSize(1);
@@ -75,7 +75,7 @@ public class BalanceServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
-        assertThatThrownBy(() -> balanceService.useBalance(1L, 300))
+        assertThatThrownBy(() -> balanceService.useBalance(user, 300))
                 .isInstanceOf(InsufficientBalanceException.class)
                 .hasMessageContaining("잔액이 부족합니다.");
     }
