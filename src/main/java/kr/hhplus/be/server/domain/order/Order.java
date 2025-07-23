@@ -1,8 +1,10 @@
 package kr.hhplus.be.server.domain.order;
 
 import jakarta.persistence.*;
+import kr.hhplus.be.server.domain.coupon.Coupon;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -21,7 +23,8 @@ public class Order {
 
     private int totalAmount;
 
-    private String status;
+    @Setter
+    private OrderStatus status;
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
@@ -29,14 +32,26 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 
-    public static Order create(Long userId, List<OrderItem> items, int totalAmount) {
+    public static Order create(Long userId, List<OrderItem> items, Coupon coupon) {
         Order order = new Order();
         order.userId = userId;
         order.items.addAll(items);
-        order.totalAmount = totalAmount;
-        order.status = "PAID";
+        order.status = OrderStatus.DRAFT;
         order.createdAt = new Date();
         items.forEach(item -> item.setOrder(order));
+
+
+        int total = items.stream()
+                .mapToInt(OrderItem::getSubtotal)
+                .sum();
+
+//        if (coupon != null && coupon.isAvailable()) {
+//            coupon.use();
+//            int discount = coupon.getDiscountAmount();
+//            total = Math.max(0, total - discount);
+//        }
+
+        order.totalAmount = total;
         return order;
     }
 }
