@@ -4,17 +4,15 @@ import kr.hhplus.be.server.controller.product.ProductResponseDto;
 import kr.hhplus.be.server.domain.product.Product;
 import kr.hhplus.be.server.domain.product.ProductRepository;
 import kr.hhplus.be.server.exception.ProductNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ProductService {
     private final ProductRepository productRepository;
-
-    public ProductService(ProductRepository productRepository) {
-        this.productRepository = productRepository;
-    }
 
     public List<ProductResponseDto> getAllProducts() {
         return productRepository.findAll().stream()
