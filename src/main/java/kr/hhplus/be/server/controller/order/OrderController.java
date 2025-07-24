@@ -1,29 +1,27 @@
 package kr.hhplus.be.server.controller.order;
 
+import kr.hhplus.be.server.domain.order.Order;
 import kr.hhplus.be.server.exception.*;
+import kr.hhplus.be.server.facade.order.OrderFacade;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiredArgsConstructor
 public class OrderController implements OrderApi {
+
+    private final OrderFacade orderFacade;
 
     @Override
     public ResponseEntity<OrderResponseDto> createOrder(OrderRequestDto request) {
-        if (request.getUserId() <= 0) {
-            throw new UserNotFoundException("사용자를 찾을 수 없습니다.");
-        }
+        Order order = orderFacade.placeOrder(
+                request.getUserId(),
+                request.getItems(),
+                request.getCouponId()
+        );
 
-        if (request.getCouponId() != null && request.getCouponId() <= 0) {
-            throw new InvalidCouponException("쿠폰이 유효하지 않습니다.");
-        }
-
-        int totalAmount = 15000;
-
-        // mock 잔액, 재고, 쿠폰 확인 생략
-        if (totalAmount > 15000) {
-            throw new InsufficientBalanceException("잔액이 부족합니다.");
-        }
-
-        return ResponseEntity.status(201).body(new OrderResponseDto(1001L, totalAmount));
+        OrderResponseDto dto = new OrderResponseDto(order.getId(), order.getTotalAmount());
+        return ResponseEntity.status(201).body(dto);
     }
 }
