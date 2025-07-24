@@ -20,8 +20,7 @@ public class Product {
 
     private int stock;
 
-    public Product(Long id, String name, int price, int stock) {
-        this.id = id;
+    public Product(String name, int price, int stock) {
         this.name = name;
         this.price = price;
         this.stock = stock;

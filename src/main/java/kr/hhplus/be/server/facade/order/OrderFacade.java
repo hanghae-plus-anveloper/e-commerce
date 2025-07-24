@@ -42,9 +42,8 @@ public class OrderFacade {
                 .mapToInt(OrderItem::getSubtotal)
                 .sum();
 
-        Coupon coupon = null;
         if (couponId != null) {
-            coupon = couponService.findValidCouponOrThrow(couponId, user.getId());
+            Coupon coupon = couponService.findValidCouponOrThrow(couponId, user.getId());
             int discount = coupon.getDiscountRate() > 0
                     ? (int) (total * coupon.getDiscountRate())
                     : coupon.getDiscountAmount();
