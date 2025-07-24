@@ -1,5 +1,7 @@
 package kr.hhplus.be.server.controller.user;
 
+import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
 import kr.hhplus.be.server.domain.balance.Balance;
 import kr.hhplus.be.server.domain.balance.BalanceRepository;
 import kr.hhplus.be.server.domain.user.User;
@@ -9,32 +11,37 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.*;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.utility.TestcontainersConfiguration;
 
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import static io.restassured.RestAssured.*;
+import static org.hamcrest.Matchers.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class UserControllerIntegrationTest {
+@ActiveProfiles("test")
+@Import(TestcontainersConfiguration.class)
+class UserControllerTest {
 
+    @LocalServerPort
+    int port;
 
-    @Autowired
-    private TestRestTemplate restTemplate;
-
+    private Long userId;
     @Autowired
     private UserRepository userRepository;
 
     @Autowired
     private BalanceRepository balanceRepository;
 
-    private Long userId;
 
     @BeforeEach
     void setUp() {
+        RestAssured.port = port;
+
         userRepository.deleteAll();
         balanceRepository.deleteAll();
 
@@ -48,61 +55,45 @@ class UserControllerIntegrationTest {
     @Test
     @DisplayName("잔액 조회 API - 성공")
     void getBalance() {
-        ResponseEntity<BalanceResponseDto> response = restTemplate.getForEntity(
-                "/users/" + userId + "/balance",
-                BalanceResponseDto.class
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getUserId()).isEqualTo(userId);
-        assertThat(response.getBody().getBalance()).isEqualTo(1000);
+        given()
+                .accept(ContentType.JSON)
+                .when()
+                .get("/users/{userId}/balance", userId)
+                .then()
+                .statusCode(HttpStatus.OK.value())
+                .body("userId", equalTo(userId.intValue()))
+                .body("balance", equalTo(1000));
     }
 
     @Test
     @DisplayName("잔액 충전 API - 성공")
     void chargeBalance() {
-        ChargeRequestDto request = new ChargeRequestDto(500);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<ChargeRequestDto> entity = new HttpEntity<>(request, headers);
-
-        ResponseEntity<BalanceResponseDto> response = restTemplate.postForEntity(
-                "/users/" + userId + "/balance",
-                entity,
-                BalanceResponseDto.class
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getBalance()).isEqualTo(1500);
+        given()
+                .contentType(ContentType.JSON)
+                .body("{\"amount\":500}")
+                .when()
+                .post("/users/{userId}/balance", userId)
+                .then()
+                .statusCode(HttpStatus.CREATED.value())
+                .body("balance", equalTo(1500));
     }
 
     @Test
     @DisplayName("음수 충전 API - 실패 (400)")
     void chargeBalance_fail() {
-        ChargeRequestDto request = new ChargeRequestDto(-100);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<ChargeRequestDto> entity = new HttpEntity<>(request, headers);
-
-        ResponseEntity<Map> response = restTemplate.postForEntity(
-                "/users/" + userId + "/balance",
-                entity,
-                Map.class
-        );
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().get("message")).isEqualTo("충전 금액은 1원 이상이어야 합니다.");
-        assertThat(response.getBody().get("status")).isEqualTo(400);
+        given()
+                .contentType(ContentType.JSON)
+                .body("{\"amount\":-100}")
+                .when()
+                .post("/users/{userId}/balance", userId)
+                .then()
+                .statusCode(HttpStatus.BAD_REQUEST.value())
+                .body("message", equalTo("충전 금액은 1원 이상이어야 합니다."))
+                .body("status", equalTo(400));
     }
 
     @DynamicPropertySource
-    static void registerPort(DynamicPropertyRegistry registry) {
+    static void overrideProperties(DynamicPropertyRegistry registry) {
+        // 커스텀 포트 등록 등 필요 시 작성
     }
 }
