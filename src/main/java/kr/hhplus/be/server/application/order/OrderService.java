@@ -15,8 +15,8 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
 
-    public Order createOrder(Long userId, List<OrderItem> items, Coupon coupon) {
-        Order order = Order.create(userId, items, coupon);
+    public Order createOrder(Long userId, List<OrderItem> items, int totalAmount) {
+        Order order = Order.create(userId, items, totalAmount);
         return orderRepository.save(order);
     }
 }

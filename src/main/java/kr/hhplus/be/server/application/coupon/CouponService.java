@@ -5,11 +5,12 @@ import kr.hhplus.be.server.domain.coupon.CouponPolicy;
 import kr.hhplus.be.server.domain.coupon.CouponPolicyRepository;
 import kr.hhplus.be.server.domain.coupon.CouponRepository;
 import kr.hhplus.be.server.domain.user.User;
-import kr.hhplus.be.server.exception.CouponSoldOutException;
 import kr.hhplus.be.server.exception.InvalidCouponException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -38,5 +39,22 @@ public class CouponService {
                 .build();
 
         return couponRepository.save(coupon);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Coupon> getCoupons(Long userId) {
+        return couponRepository.findAllByUserId(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public Coupon findValidCouponOrThrow(Long couponId, Long userId) {
+        Coupon coupon = couponRepository.findByIdAndUserId(couponId, userId)
+                .orElseThrow(() -> new InvalidCouponException("쿠폰을 찾을 수 없습니다."));
+
+        if (!coupon.isAvailable()) {
+            throw new InvalidCouponException("사용할 수 없는 쿠폰입니다.");
+        }
+
+        return coupon;
     }
 }
