@@ -2,6 +2,7 @@ package kr.hhplus.be.server.domain.order;
 
 import jakarta.persistence.*;
 import kr.hhplus.be.server.domain.coupon.Coupon;
+import kr.hhplus.be.server.exception.InvalidCouponException;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -46,11 +47,21 @@ public class Order {
                 .mapToInt(OrderItem::getSubtotal)
                 .sum();
 
-//        if (coupon != null && coupon.isAvailable()) {
-//            coupon.use();
-//            int discount = coupon.getDiscountAmount();
-//            total = Math.max(0, total - discount);
-//        }
+        if (coupon != null) {
+            if (!coupon.isAvailable()) {
+                throw new InvalidCouponException("사용할 수 없는 쿠폰입니다.");
+            }
+            coupon.use();
+
+            int discount = 0;
+            if (coupon.getDiscountRate() > 0) {
+                discount = (int) (total * coupon.getDiscountRate());
+            } else if (coupon.getDiscountAmount() > 0) {
+                discount = coupon.getDiscountAmount();
+            }
+
+            total = Math.max(0, total - discount);
+        }
 
         order.totalAmount = total;
         return order;
