@@ -30,7 +30,8 @@ Controller → (Facade) → Service → Domain/Repository
 복잡한 트랜잭션 처리나 도메인 간 협업이 필요한 경우 이 계층을 통해 로직을 단순화합니다.
 
 -   `UserFacade`: `UserService`, `BalanceService` 조합
--   `OrderFacade`: `OrderService`, `BalanceService`, `CouponService`, `ProductService` 조합
+-   `CouponFacade`: `UserService`, `CouponService` 조합
+-   `OrderFacade`: `UserService`, `OrderService`, `BalanceService`, `CouponService`, `ProductService` 조합
 
 ### 3. application
 
@@ -39,7 +40,7 @@ Controller → (Facade) → Service → Domain/Repository
 일부 복잡한 도메인(User, Order)은 별도의 Facade를 통해 여러 Service를 조합합니다.
 
 -   `*Service.java`: 각 도메인 단위의 비즈니스 처리 로직
--   `user`, `order`: 복합 흐름을 다루기 위해 `facade` 계층 사용
+-   `user`, `order`, `coupon`: 복합 흐름을 다루기 위해 `facade` 계층 사용
 
 > 하위 디렉토리: `balance`, `coupon`, `order`, `product`, `user`
 
@@ -83,10 +84,10 @@ npx --yes file-tree-cli src/test/java --ext java
             └── server
                 ├── ServerApplication.java
                 ├── application
-                │   ├── coupon
-                │   │   └── CouponService.java
                 │   ├── balance
                 │   │   └── BalanceService.java
+                │   ├── coupon
+                │   │   └── CouponService.java
                 │   ├── order
                 │   │   └── OrderService.java
                 │   ├── product
@@ -100,46 +101,49 @@ npx --yes file-tree-cli src/test/java --ext java
                 │       └── SwaggerConfig.java
                 ├── controller
                 │   ├── coupon
-                │   │   ├── CouponApi.java (i)
+                │   │   ├── CouponApi.java
                 │   │   ├── CouponController.java
                 │   │   └── CouponResponseDto.java
                 │   ├── order
-                │   │   ├── OrderApi.java (i)
+                │   │   ├── OrderApi.java
                 │   │   ├── OrderController.java
                 │   │   ├── OrderItemRequestDto.java
                 │   │   ├── OrderRequestDto.java
                 │   │   └── OrderResponseDto.java
                 │   ├── product
-                │   │   ├── ProductApi.java (i)
+                │   │   ├── ProductApi.java
                 │   │   ├── ProductController.java
                 │   │   ├── ProductResponseDto.java
-                │   │   ├── ProductStatisticsApi.java (i)
+                │   │   ├── ProductStatisticsApi.java
                 │   │   ├── ProductStatisticsController.java
                 │   │   └── TopProductResponseDto.java
                 │   └── user
                 │       ├── BalanceResponseDto.java
                 │       ├── ChargeRequestDto.java
-                │       ├── UserApi.java (i)
+                │       ├── UserApi.java
                 │       └── UserController.java
                 ├── domain
                 │   ├── balance
                 │   │   ├── Balance.java
-                │   │   ├── BalanceChangeType.java (Enum)
+                │   │   ├── BalanceChangeType.java
                 │   │   ├── BalanceHistory.java
-                │   │   └── BalanceRepository.java (i)
+                │   │   └── BalanceRepository.java
                 │   ├── coupon
-                │   │   └── Coupon.java
+                │   │   ├── Coupon.java
+                │   │   ├── CouponPolicy.java
+                │   │   ├── CouponPolicyRepository.java
+                │   │   └── CouponRepository.java
                 │   ├── order
                 │   │   ├── Order.java
                 │   │   ├── OrderItem.java
-                │   │   ├── OrderRepository.java (i)
-                │   │   └── OrderStatus.java (Enum)
+                │   │   ├── OrderRepository.java
+                │   │   └── OrderStatus.java
                 │   ├── product
                 │   │   ├── Product.java
-                │   │   └── ProductRepository.java (i)
+                │   │   └── ProductRepository.java
                 │   └── user
                 │       ├── User.java
-                │       └── UserRepository.java (i)
+                │       └── UserRepository.java
                 ├── dto
                 │   └── common
                 │       └── CustomErrorResponse.java
@@ -151,6 +155,8 @@ npx --yes file-tree-cli src/test/java --ext java
                 │   ├── ProductNotFoundException.java
                 │   └── UserNotFoundException.java
                 ├── facade
+                │   ├── coupon
+                │   │   └── CouponFacade.java
                 │   ├── order
                 │   │   └── OrderFacade.java
                 │   └── user
@@ -170,13 +176,22 @@ npx --yes file-tree-cli src/test/java --ext java
                 ├── application
                 │   ├── balance
                 │   │   └── BalanceServiceTest.java
+                │   ├── coupon
+                │   │   └── CouponServiceTest.java
                 │   ├── order
                 │   │   └── OrderServiceTest.java
                 │   └── product
                 │       └── ProductServiceTest.java
-                └── controller
-                    └── user
-                        └── UserControllerTest.java
+                ├── controller
+                │   ├── coupon
+                │   │   └── CouponControllerTest.java
+                │   ├── order
+                │   │   └── OrderControllerTest.java
+                │   └── user
+                │       └── UserControllerTest.java
+                └── domain
+                    └── BalanceRepositoryTest.java
+
 ```
 
 ## 레이어 간 흐름 예시
@@ -200,7 +215,19 @@ UserController
       → BalanceRepository
 ```
 
-### 3. 복합 구조 - `Order`
+### 3. 복합 구조 - `Coupon`
+
+```
+CouponController
+  → CouponFacade
+    → UserService
+      → UserRepository
+    → CouponService
+      → CouponRepository
+```
+
+
+### 4. 복합 구조 - `Order`
 
 ```
 OrderController
