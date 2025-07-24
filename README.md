@@ -13,7 +13,7 @@ Controller → (Facade) → Service → Domain/Repository
 
 ## 디렉토리 구성 및 역할
 
-### 1. `controller`
+### 1. controller
 
 클라이언트로부터의 HTTP 요청을 받아 처리하는 계층입니다.
 요청 검증 및 DTO 변환, 응답 생성의 책임을 가집니다.
@@ -24,7 +24,7 @@ Controller → (Facade) → Service → Domain/Repository
 
 > 하위 디렉토리: `coupon`, `order`, `product`, `user`
 
-### 2. `facade`
+### 2. facade
 
 여러 Service 간의 흐름을 조율하는 계층입니다.
 복잡한 트랜잭션 처리나 도메인 간 협업이 필요한 경우 이 계층을 통해 로직을 단순화합니다.
@@ -32,7 +32,7 @@ Controller → (Facade) → Service → Domain/Repository
 -   `UserFacade`: `UserService`, `BalanceService` 조합
 -   `OrderFacade`: `OrderService`, `BalanceService`, `CouponService`, `ProductService` 조합
 
-### 3. `application`
+### 3. application
 
 비즈니스 로직을 담당하는 계층입니다.
 단일 책임 원칙에 따라 기능별 Service로 나누어져 있으며,
@@ -43,7 +43,7 @@ Controller → (Facade) → Service → Domain/Repository
 
 > 하위 디렉토리: `balance`, `coupon`, `order`, `product`, `user`
 
-### 4. `domain`
+### 4. domain
 
 실제 데이터베이스와 연결되는 계층입니다.
 JPA 기반의 Entity, Repository로 구성되어 있으며 각 도메인은 하위 디렉토리로 구분됩니다.
@@ -53,21 +53,21 @@ JPA 기반의 Entity, Repository로 구성되어 있으며 각 도메인은 하�
 
 > 하위 도메인: `balance`, `coupon`, `order`, `product`, `user`
 
-### 5. `dto/common`
+### 5. dto/common
 
 공통적으로 사용하는 DTO가 위치합니다. 주로 에러 응답 등의 형식을 정의합니다.
 
 -   `CustomErrorResponse.java`: 표준 에러 응답 포맷
 
-### 6. `exception`
+### 6. exception
 
 예외 처리를 담당하는 계층입니다. 사용자 정의 예외, 글로벌 예외 핸들러 등을 포함합니다.
 
-### 7. `infrastructure/external` - 설계 기획, 미구현
+### 7. infrastructure/external - 설계 기획, 미구현
 
 카카오, Slack 알림과 같이 외부 연동을 위한 Service가 위치합니다.
 
-### 구성
+### 디렉토리 구조
 
 ```bash
 npx --yes file-tree-cli src/main/java --ext java
