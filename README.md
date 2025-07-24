@@ -4,7 +4,7 @@
 
 ## 전체 계층 구조
 
-```yaml
+```
 Controller → (Facade) → Service → Domain/Repository
 ```
 
@@ -74,7 +74,7 @@ npx --yes file-tree-cli src/main/java --ext java
 npx --yes file-tree-cli src/test/java --ext java
 ```
 
-```yaml
+```
 ## npx --yes file-tree-cli src/main/java --ext java
 /Workspace/hhplus-e-commerce-java/src/main/java
 └── kr
@@ -183,39 +183,39 @@ npx --yes file-tree-cli src/test/java --ext java
 
 ### 1. 단순한 구조 - `Product`
 
-```yaml
+```
 ProductController
-→ ProductService
-→ ProductRepository
+  → ProductService
+    → ProductRepository
 ```
 
 ### 2. 복합 구조 - `User`
 
-```yaml
+```
 UserController
-→ UserFacade
-→ UserService
-→ UserRepository
-→ BalanceService
-→ BalanceRepository
+  → UserFacade
+    → UserService
+      → UserRepository
+    → BalanceService
+      → BalanceRepository
 ```
 
 ### 3. 복합 구조 - `Order`
 
-```yaml
+```
 OrderController
-→ OrderFacade
-→ UserService
-→ UserRepository
-→ ProductService
-→ ProductRepository
-→ CouponService
-→ CouponRepository
-→ BalanceService
-→ BalanceRepository
-→ OrderService
-→ OrderRepository
-→ (NotificationService) ## 외부 예시 - 미구현
+  → OrderFacade
+    → UserService
+      → UserRepository
+    → ProductService
+      → ProductRepository
+    → CouponService
+      → CouponRepository
+    → BalanceService
+      → BalanceRepository
+    → OrderService
+      → OrderRepository
+    → (NotificationService) ## 외부 예시 - 미구현
 ```
 
 ## 설계 의도 요약
