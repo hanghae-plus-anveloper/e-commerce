@@ -29,8 +29,8 @@ class ProductServiceTest {
     @DisplayName("전체 상품 목록을 반환한다")
     void testGetAllProducts() {
         List<Product> products = List.of(
-                new Product(1L, "USB-C 충전기", 19900, 25),
-                new Product(2L, "노트북 거치대", 39900, 10)
+                new Product("USB-C 충전기", 19900, 25),
+                new Product("노트북 거치대", 39900, 10)
         );
         when(productRepository.findAll()).thenReturn(products);
 
@@ -44,10 +44,12 @@ class ProductServiceTest {
     @Test
     @DisplayName("ID로 단일 상품을 조회한다")
     void testGetProductById() {
-        Product product = new Product(1L, "USB-C 충전기", 19900, 25);
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        Product product = new Product("USB-C 충전기", 19900, 25);
+        Product saved = productRepository.save(product);
 
-        ProductResponseDto result = productService.getProductById(1L);
+        when(productRepository.findById(saved.getId())).thenReturn(Optional.of(product));
+
+        ProductResponseDto result = productService.getProductById(saved.getId());
 
         assertThat(result.getName()).isEqualTo("USB-C 충전기");
         assertThat(result.getStock()).isEqualTo(25);

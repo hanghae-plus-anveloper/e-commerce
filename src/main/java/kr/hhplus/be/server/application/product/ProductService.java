@@ -25,4 +25,18 @@ public class ProductService {
                 .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
         return ProductResponseDto.from(product);
     }
+
+    public void verifyStock(Long productId, int requiredQuantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
+        if (product.getStock() < requiredQuantity) {
+            throw new IllegalStateException("상품 재고가 부족합니다.");
+        }
+    }
+
+    public int getPrice(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
+        return product.getPrice();
+    }
 }

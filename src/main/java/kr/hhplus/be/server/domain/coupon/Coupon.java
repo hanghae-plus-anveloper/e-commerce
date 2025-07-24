@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.domain.coupon;
 
 import jakarta.persistence.*;
+import kr.hhplus.be.server.exception.InvalidCouponException;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,12 +33,12 @@ public class Coupon {
 
     public void use() {
         if (!isAvailable()) {
-            throw new IllegalStateException("사용할 수 없는 쿠폰입니다.");
+            throw new InvalidCouponException("사용할 수 없는 쿠폰입니다.");
         }
         this.used = true;
     }
 
     public boolean isAvailable() {
-        return !used && policy.isAvailable();
+        return !used && policy.isWithinPeriod();
     }
 }

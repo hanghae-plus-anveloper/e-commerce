@@ -77,7 +77,10 @@ public interface CouponApi {
         )
     })
     @PostMapping("/coupons")
-    ResponseEntity<CouponResponseDto> claimCoupon(@RequestParam @Min(1) Long userId);
+    ResponseEntity<CouponResponseDto> claimCoupon(
+            @RequestParam @Min(1) Long userId,
+            @RequestParam @Min(1) Long policyId
+    );
 
     @Operation(summary = "사용자 보유 쿠폰 조회", description = "특정 사용자가 보유한 쿠폰 목록을 조회합니다.")
     @ApiResponses({

@@ -2,6 +2,7 @@ package kr.hhplus.be.server.domain.order;
 
 import jakarta.persistence.*;
 import kr.hhplus.be.server.domain.coupon.Coupon;
+import kr.hhplus.be.server.exception.InvalidCouponException;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,7 +14,7 @@ import java.util.List;
 @Entity
 @Getter
 @NoArgsConstructor
-@Table(name = "ORDER")
+@Table(name = "`ORDER`")
 public class Order {
 
     @Id
@@ -33,26 +34,14 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 
-    public static Order create(Long userId, List<OrderItem> items, Coupon coupon) {
+    public static Order create(Long userId, List<OrderItem> items, int totalAmount) {
         Order order = new Order();
         order.userId = userId;
         order.items.addAll(items);
         order.status = OrderStatus.DRAFT;
         order.createdAt = new Date();
         items.forEach(item -> item.setOrder(order));
-
-
-        int total = items.stream()
-                .mapToInt(OrderItem::getSubtotal)
-                .sum();
-
-//        if (coupon != null && coupon.isAvailable()) {
-//            coupon.use();
-//            int discount = coupon.getDiscountAmount();
-//            total = Math.max(0, total - discount);
-//        }
-
-        order.totalAmount = total;
+        order.totalAmount = totalAmount;
         return order;
     }
 }

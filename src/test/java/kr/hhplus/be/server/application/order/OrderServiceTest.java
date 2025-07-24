@@ -1,5 +1,7 @@
 package kr.hhplus.be.server.application.order;
 
+import kr.hhplus.be.server.domain.coupon.Coupon;
+import kr.hhplus.be.server.domain.coupon.CouponPolicy;
 import kr.hhplus.be.server.domain.order.Order;
 import kr.hhplus.be.server.domain.order.OrderItem;
 import kr.hhplus.be.server.domain.order.OrderRepository;
@@ -30,18 +32,51 @@ public class OrderServiceTest {
         Long userId = 1L;
         List<OrderItem> items = List.of(
                 OrderItem.of(1_000_001L, 10000, 2, 0),   // 20,000
-                OrderItem.of(1_000_002L, 5000, 1, 1000)  // 4,000
+                OrderItem.of(1_000_002L, 5000, 1, 0)  // 5,000
         );
 
-        Order expectedOrder = Order.create(userId, items, null);
+        Order expectedOrder = Order.create(userId, items, 25000);
         when(orderRepository.save(any(Order.class))).thenReturn(expectedOrder);
 
-        Order result = orderService.createOrder(userId, items, null);
+        Order result = orderService.createOrder(userId, items, 25000);
 
         assertThat(result).isNotNull();
         assertThat(result.getUserId()).isEqualTo(userId);
         assertThat(result.getItems()).hasSize(2);
-        assertThat(result.getTotalAmount()).isEqualTo(24000);
+        assertThat(result.getTotalAmount()).isEqualTo(25000);
         assertThat(result.getStatus()).isEqualTo(OrderStatus.DRAFT);
     }
+
+    @Test
+    @DisplayName("유효한 쿠폰이 있으면, 총액에서 할인 금액이 적용된다")
+    void createOrder_withValidCoupon_discountApplied() {
+        Long userId = 1L;
+        List<OrderItem> items = List.of(
+                OrderItem.of(1_000_001L, 10000, 2, 0),   // 20,000
+                OrderItem.of(1_000_002L, 5000, 1, 1000)  // 4,000
+        ); // 총 24,000
+
+        CouponPolicy mockPolicy = mock(CouponPolicy.class);
+        when(mockPolicy.isWithinPeriod()).thenReturn(true);
+        when(mockPolicy.getRemainingCount()).thenReturn(1);
+
+        Coupon coupon = Coupon.builder()
+                .policy(mockPolicy)
+                .userId(userId)
+                .discountAmount(4000)
+                .discountRate(0)
+                .used(false)
+                .build();
+
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Order result = orderService.createOrder(userId, items, 20000);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getUserId()).isEqualTo(userId);
+        assertThat(result.getItems()).hasSize(2);
+        assertThat(result.getStatus()).isEqualTo(OrderStatus.DRAFT);
+        assertThat(result.getTotalAmount()).isEqualTo(20000); // 24,000 - 4,000 = 20,000
+    }
+
 }
