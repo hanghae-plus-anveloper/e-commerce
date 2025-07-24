@@ -20,6 +20,9 @@ public class Product {
 
     private int stock;
 
+    @Version
+    private int version; // 낙관적 락 추가
+
     public Product(String name, int price, int stock) {
         this.name = name;
         this.price = price;

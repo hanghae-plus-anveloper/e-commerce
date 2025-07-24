@@ -2,12 +2,7 @@ package kr.hhplus.be.server.domain.coupon;
 
 import java.util.Date;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Temporal;
-import jakarta.persistence.TemporalType;
+import jakarta.persistence.*;
 import kr.hhplus.be.server.exception.CouponSoldOutException;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -32,6 +27,9 @@ public class CouponPolicy {
     private int availableCount;     // 최초 발급 수량
     private int remainingCount;     // 잔여 수량
     private int expireDays;         // 발급 기준 사용 가능 일 수
+
+    @Version
+    private int version;            // 낙관적 락 추가
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date startedAt;

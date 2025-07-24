@@ -32,8 +32,7 @@ public class OrderFacade {
 
         List<OrderItem> items = itemDtos.stream()
                 .map(dto -> {
-                    productService.verifyStock(dto.getProductId(), dto.getQuantity());
-                    int price = productService.getPrice(dto.getProductId());
+                    int price = productService.verifyDecreaseStock(dto.getProductId(), dto.getQuantity());
                     return OrderItem.of(dto.getProductId(), price, dto.getQuantity(), 0);
                 })
                 .toList();
@@ -42,12 +41,14 @@ public class OrderFacade {
                 .mapToInt(OrderItem::getSubtotal)
                 .sum();
 
+
         if (couponId != null) {
             Coupon coupon = couponService.findValidCouponOrThrow(couponId, user.getId());
             int discount = coupon.getDiscountRate() > 0
                     ? (int) (total * coupon.getDiscountRate())
                     : coupon.getDiscountAmount();
             total = Math.max(0, total - discount);
+            coupon.use();
         }
 
         balanceService.useBalance(user, total);
