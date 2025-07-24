@@ -8,6 +8,7 @@ import lombok.Setter;
 @Entity
 @Getter
 @NoArgsConstructor
+@Table(name = "ORDER_ITEM")
 public class OrderItem {
 
     @Id
