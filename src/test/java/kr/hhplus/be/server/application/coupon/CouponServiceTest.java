@@ -33,7 +33,6 @@ class CouponServiceTest {
         User user = new User("테스트 사용자"); // id 없음
         CouponPolicy policy = CouponPolicy.builder()
                 .discountAmount(1000)
-                .discountRate(0.1)
                 .availableCount(10)
                 .remainingCount(10)
                 .expireDays(30)
@@ -70,7 +69,6 @@ class CouponServiceTest {
         User user = new User("테스트 사용자");
 
         CouponPolicy expiredPolicy = CouponPolicy.builder()
-                .discountAmount(1000)
                 .discountRate(0.1)
                 .availableCount(10)
                 .remainingCount(10)
