@@ -91,9 +91,4 @@ class UserControllerTest {
                 .body("message", equalTo("충전 금액은 1원 이상이어야 합니다."))
                 .body("status", equalTo(400));
     }
-
-    @DynamicPropertySource
-    static void overrideProperties(DynamicPropertyRegistry registry) {
-        // 커스텀 포트 등록 등 필요 시 작성
-    }
 }
