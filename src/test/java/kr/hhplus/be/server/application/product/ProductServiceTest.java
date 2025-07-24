@@ -37,7 +37,7 @@ class ProductServiceTest {
         List<ProductResponseDto> result = productService.getAllProducts();
 
         assertThat(result).hasSize(2);
-        assertThat(result.get(0).getId()).isEqualTo(1L);
+        assertThat(result.get(0).getId()).isEqualTo(products.get(0).getId());
         assertThat(result.get(0).getName()).isEqualTo("USB-C 충전기");
     }
 
@@ -47,9 +47,9 @@ class ProductServiceTest {
         Product product = new Product("USB-C 충전기", 19900, 25);
         Product saved = productRepository.save(product);
 
-        when(productRepository.findById(saved.getId())).thenReturn(Optional.of(product));
+        when(productRepository.findById(product.getId())).thenReturn(Optional.of(product));
 
-        ProductResponseDto result = productService.getProductById(saved.getId());
+        ProductResponseDto result = productService.getProductById(product.getId());
 
         assertThat(result.getName()).isEqualTo("USB-C 충전기");
         assertThat(result.getStock()).isEqualTo(25);
