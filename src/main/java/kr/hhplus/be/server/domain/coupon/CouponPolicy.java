@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Temporal;
 import jakarta.persistence.TemporalType;
+import kr.hhplus.be.server.exception.CouponSoldOutException;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,12 +26,12 @@ public class CouponPolicy {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private int discountAmount; // 정액 할인
-    private double discountRate; // 정률 할인
+    private int discountAmount;     // 정액 할인
+    private double discountRate;    // 정률 할인
 
-    private int availableCount; // 최초 발급 수량
-    private int remainingCount; // 잔여 수량
-    private int expireDays; // 발급 기준 사용 가능 일 수
+    private int availableCount;     // 최초 발급 수량
+    private int remainingCount;     // 잔여 수량
+    private int expireDays;         // 발급 기준 사용 가능 일 수
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date startedAt;
@@ -38,16 +39,18 @@ public class CouponPolicy {
     @Temporal(TemporalType.TIMESTAMP)
     private Date endedAt;
 
-    public boolean isAvailable() {
+    public boolean isWithinPeriod() {
         Date now = new Date();
-        return remainingCount > 0
-                && !now.before(startedAt)
-                && !now.after(endedAt);
+        return !now.before(startedAt) && !now.after(endedAt);
+    }
+
+    public boolean hasRemainingCount() {
+        return remainingCount > 0;
     }
 
     public void decreaseRemainingCount() {
         if (remainingCount <= 0) {
-            throw new IllegalStateException("남은 쿠폰 수량이 없습니다.");
+            throw new CouponSoldOutException("남은 쿠폰 수량이 없습니다.");
         }
         this.remainingCount--;
     }
