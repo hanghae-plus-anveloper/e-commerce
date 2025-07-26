@@ -4,7 +4,7 @@
 
 ## 전체 계층 구조
 
-```yaml
+```
 Controller → (Facade) → Service → Domain/Repository
 ```
 
@@ -13,7 +13,7 @@ Controller → (Facade) → Service → Domain/Repository
 
 ## 디렉토리 구성 및 역할
 
-### 1. `controller`
+### 1. controller
 
 클라이언트로부터의 HTTP 요청을 받아 처리하는 계층입니다.
 요청 검증 및 DTO 변환, 응답 생성의 책임을 가집니다.
@@ -24,26 +24,27 @@ Controller → (Facade) → Service → Domain/Repository
 
 > 하위 디렉토리: `coupon`, `order`, `product`, `user`
 
-### 2. `facade`
+### 2. facade
 
 여러 Service 간의 흐름을 조율하는 계층입니다.
 복잡한 트랜잭션 처리나 도메인 간 협업이 필요한 경우 이 계층을 통해 로직을 단순화합니다.
 
 -   `UserFacade`: `UserService`, `BalanceService` 조합
--   `OrderFacade`: `OrderService`, `BalanceService`, `CouponService`, `ProductService` 조합
+-   `CouponFacade`: `UserService`, `CouponService` 조합
+-   `OrderFacade`: `UserService`, `OrderService`, `BalanceService`, `CouponService`, `ProductService` 조합
 
-### 3. `application`
+### 3. application
 
 비즈니스 로직을 담당하는 계층입니다.
 단일 책임 원칙에 따라 기능별 Service로 나누어져 있으며,
 일부 복잡한 도메인(User, Order)은 별도의 Facade를 통해 여러 Service를 조합합니다.
 
 -   `*Service.java`: 각 도메인 단위의 비즈니스 처리 로직
--   `user`, `order`: 복합 흐름을 다루기 위해 `facade` 계층 사용
+-   `user`, `order`, `coupon`: 복합 흐름을 다루기 위해 `facade` 계층 사용
 
 > 하위 디렉토리: `balance`, `coupon`, `order`, `product`, `user`
 
-### 4. `domain`
+### 4. domain
 
 실제 데이터베이스와 연결되는 계층입니다.
 JPA 기반의 Entity, Repository로 구성되어 있으며 각 도메인은 하위 디렉토리로 구분됩니다.
@@ -53,28 +54,28 @@ JPA 기반의 Entity, Repository로 구성되어 있으며 각 도메인은 하�
 
 > 하위 도메인: `balance`, `coupon`, `order`, `product`, `user`
 
-### 5. `dto/common`
+### 5. dto/common
 
 공통적으로 사용하는 DTO가 위치합니다. 주로 에러 응답 등의 형식을 정의합니다.
 
 -   `CustomErrorResponse.java`: 표준 에러 응답 포맷
 
-### 6. `exception`
+### 6. exception
 
 예외 처리를 담당하는 계층입니다. 사용자 정의 예외, 글로벌 예외 핸들러 등을 포함합니다.
 
-### 7. `infrastructure/external` - 설계 기획, 미구현
+### 7. infrastructure/external - 설계 기획, 미구현
 
 카카오, Slack 알림과 같이 외부 연동을 위한 Service가 위치합니다.
 
-### 구성
+### 디렉토리 구조
 
 ```bash
 npx --yes file-tree-cli src/main/java --ext java
 npx --yes file-tree-cli src/test/java --ext java
 ```
 
-```yaml
+```
 ## npx --yes file-tree-cli src/main/java --ext java
 /Workspace/hhplus-e-commerce-java/src/main/java
 └── kr
@@ -83,10 +84,10 @@ npx --yes file-tree-cli src/test/java --ext java
             └── server
                 ├── ServerApplication.java
                 ├── application
-                │   ├── coupon
-                │   │   └── CouponService.java
                 │   ├── balance
                 │   │   └── BalanceService.java
+                │   ├── coupon
+                │   │   └── CouponService.java
                 │   ├── order
                 │   │   └── OrderService.java
                 │   ├── product
@@ -100,46 +101,49 @@ npx --yes file-tree-cli src/test/java --ext java
                 │       └── SwaggerConfig.java
                 ├── controller
                 │   ├── coupon
-                │   │   ├── CouponApi.java (i)
+                │   │   ├── CouponApi.java
                 │   │   ├── CouponController.java
                 │   │   └── CouponResponseDto.java
                 │   ├── order
-                │   │   ├── OrderApi.java (i)
+                │   │   ├── OrderApi.java
                 │   │   ├── OrderController.java
                 │   │   ├── OrderItemRequestDto.java
                 │   │   ├── OrderRequestDto.java
                 │   │   └── OrderResponseDto.java
                 │   ├── product
-                │   │   ├── ProductApi.java (i)
+                │   │   ├── ProductApi.java
                 │   │   ├── ProductController.java
                 │   │   ├── ProductResponseDto.java
-                │   │   ├── ProductStatisticsApi.java (i)
+                │   │   ├── ProductStatisticsApi.java
                 │   │   ├── ProductStatisticsController.java
                 │   │   └── TopProductResponseDto.java
                 │   └── user
                 │       ├── BalanceResponseDto.java
                 │       ├── ChargeRequestDto.java
-                │       ├── UserApi.java (i)
+                │       ├── UserApi.java
                 │       └── UserController.java
                 ├── domain
                 │   ├── balance
                 │   │   ├── Balance.java
-                │   │   ├── BalanceChangeType.java (Enum)
+                │   │   ├── BalanceChangeType.java
                 │   │   ├── BalanceHistory.java
-                │   │   └── BalanceRepository.java (i)
+                │   │   └── BalanceRepository.java
                 │   ├── coupon
-                │   │   └── Coupon.java
+                │   │   ├── Coupon.java
+                │   │   ├── CouponPolicy.java
+                │   │   ├── CouponPolicyRepository.java
+                │   │   └── CouponRepository.java
                 │   ├── order
                 │   │   ├── Order.java
                 │   │   ├── OrderItem.java
-                │   │   ├── OrderRepository.java (i)
-                │   │   └── OrderStatus.java (Enum)
+                │   │   ├── OrderRepository.java
+                │   │   └── OrderStatus.java
                 │   ├── product
                 │   │   ├── Product.java
-                │   │   └── ProductRepository.java (i)
+                │   │   └── ProductRepository.java
                 │   └── user
                 │       ├── User.java
-                │       └── UserRepository.java (i)
+                │       └── UserRepository.java
                 ├── dto
                 │   └── common
                 │       └── CustomErrorResponse.java
@@ -151,6 +155,8 @@ npx --yes file-tree-cli src/test/java --ext java
                 │   ├── ProductNotFoundException.java
                 │   └── UserNotFoundException.java
                 ├── facade
+                │   ├── coupon
+                │   │   └── CouponFacade.java
                 │   ├── order
                 │   │   └── OrderFacade.java
                 │   └── user
@@ -170,52 +176,73 @@ npx --yes file-tree-cli src/test/java --ext java
                 ├── application
                 │   ├── balance
                 │   │   └── BalanceServiceTest.java
+                │   ├── coupon
+                │   │   └── CouponServiceTest.java
                 │   ├── order
                 │   │   └── OrderServiceTest.java
                 │   └── product
                 │       └── ProductServiceTest.java
-                └── controller
-                    └── user
-                        └── UserControllerTest.java
+                ├── controller
+                │   ├── coupon
+                │   │   └── CouponControllerTest.java
+                │   ├── order
+                │   │   └── OrderControllerTest.java
+                │   └── user
+                │       └── UserControllerTest.java
+                └── domain
+                    └── BalanceRepositoryTest.java
+
 ```
 
 ## 레이어 간 흐름 예시
 
 ### 1. 단순한 구조 - `Product`
 
-```yaml
+```
 ProductController
-→ ProductService
-→ ProductRepository
+  → ProductService
+    → ProductRepository
 ```
 
 ### 2. 복합 구조 - `User`
 
-```yaml
+```
 UserController
-→ UserFacade
-→ UserService
-→ UserRepository
-→ BalanceService
-→ BalanceRepository
+  → UserFacade
+    → UserService
+      → UserRepository
+    → BalanceService
+      → BalanceRepository
 ```
 
-### 3. 복합 구조 - `Order`
+### 3. 복합 구조 - `Coupon`
 
-```yaml
+```
+CouponController
+  → CouponFacade
+    → UserService
+      → UserRepository
+    → CouponService
+      → CouponRepository
+```
+
+
+### 4. 복합 구조 - `Order`
+
+```
 OrderController
-→ OrderFacade
-→ UserService
-→ UserRepository
-→ ProductService
-→ ProductRepository
-→ CouponService
-→ CouponRepository
-→ BalanceService
-→ BalanceRepository
-→ OrderService
-→ OrderRepository
-→ (NotificationService) ## 외부 예시 - 미구현
+  → OrderFacade
+    → UserService
+      → UserRepository
+    → ProductService
+      → ProductRepository
+    → CouponService
+      → CouponRepository
+    → BalanceService
+      → BalanceRepository
+    → OrderService
+      → OrderRepository
+    → (NotificationService) ## 외부 예시 - 미구현
 ```
 
 ## 설계 의도 요약

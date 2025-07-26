@@ -1,9 +1,8 @@
 package kr.hhplus.be.server.application.balance;
 
-import kr.hhplus.be.server.domain.balance.Balance;
+import kr.hhplus.be.server.domain.balance.*;
 import kr.hhplus.be.server.domain.user.User;
 import kr.hhplus.be.server.domain.user.UserRepository;
-import kr.hhplus.be.server.domain.balance.BalanceRepository;
 import kr.hhplus.be.server.exception.UserNotFoundException;
 import kr.hhplus.be.server.exception.InsufficientBalanceException;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BalanceService {
 
     private final BalanceRepository balanceRepository;
+    private final BalanceHistoryRepository balanceHistoryRepository;
 
     @Transactional
     public void chargeBalance(User user, int amount) {
@@ -27,6 +27,14 @@ public class BalanceService {
 
         balance.charge(amount);
         balanceRepository.save(balance);
+
+        BalanceHistory history = new BalanceHistory(
+                balance,
+                amount,
+                balance.getBalance(),
+                BalanceChangeType.CHARGE
+        );
+        balanceHistoryRepository.save(history);
     }
 
     @Transactional
@@ -39,5 +47,13 @@ public class BalanceService {
 
         balance.use(amount);
         balanceRepository.save(balance);
+
+        BalanceHistory history = new BalanceHistory(
+                balance,
+                -amount,
+                balance.getBalance(),
+                BalanceChangeType.USE
+        );
+        balanceHistoryRepository.save(history);
     }
 }

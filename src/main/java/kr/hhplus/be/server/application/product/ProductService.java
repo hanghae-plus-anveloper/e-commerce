@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.application.product;
 
+import jakarta.transaction.Transactional;
 import kr.hhplus.be.server.controller.product.ProductResponseDto;
 import kr.hhplus.be.server.domain.product.Product;
 import kr.hhplus.be.server.domain.product.ProductRepository;
@@ -24,5 +25,16 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
         return ProductResponseDto.from(product);
+    }
+
+    @Transactional
+    public int verifyDecreaseStock(Long productId, int requiredQuantity) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
+        if (product.getStock() < requiredQuantity) {
+            throw new IllegalStateException("상품 재고가 부족합니다.");
+        }
+        product.decreaseStock(requiredQuantity);
+        return product.getPrice();
     }
 }

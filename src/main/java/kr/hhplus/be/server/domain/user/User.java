@@ -14,7 +14,7 @@ import java.time.format.DateTimeFormatter;
 @Getter
 @Setter
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
-@Table(name = "USER")
+@Table(name = "`USER`")
 public class User {
 
 

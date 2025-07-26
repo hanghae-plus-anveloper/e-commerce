@@ -3,6 +3,7 @@ package kr.hhplus.be.server.application.balance;
 
 import kr.hhplus.be.server.domain.balance.Balance;
 import kr.hhplus.be.server.domain.balance.BalanceChangeType;
+import kr.hhplus.be.server.domain.balance.BalanceHistoryRepository;
 import kr.hhplus.be.server.domain.balance.BalanceRepository;
 import kr.hhplus.be.server.domain.user.User;
 import kr.hhplus.be.server.domain.user.UserRepository;
@@ -19,14 +20,17 @@ import static org.mockito.Mockito.*;
 
 public class BalanceServiceTest {
     private BalanceService balanceService;
+
     private BalanceRepository balanceRepository;
+    private BalanceHistoryRepository balanceHistoryRepository;
     private UserRepository userRepository;
 
     @BeforeEach
     void setUp() {
         balanceRepository = mock(BalanceRepository.class);
+        balanceHistoryRepository = mock(BalanceHistoryRepository.class);
         userRepository = mock(UserRepository.class);
-        balanceService = new BalanceService(balanceRepository);
+        balanceService = new BalanceService(balanceRepository, balanceHistoryRepository);
     }
 
     @Test
