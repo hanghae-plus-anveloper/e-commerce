@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.controller.coupon;
+package kr.hhplus.be.server.coupon.controller;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;

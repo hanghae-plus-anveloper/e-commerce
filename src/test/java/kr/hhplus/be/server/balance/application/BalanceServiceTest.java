@@ -1,7 +1,6 @@
-package kr.hhplus.be.server.application.balance;
+package kr.hhplus.be.server.balance.application;
 
 
-import kr.hhplus.be.server.balance.application.BalanceService;
 import kr.hhplus.be.server.balance.domain.Balance;
 import kr.hhplus.be.server.balance.domain.BalanceChangeType;
 import kr.hhplus.be.server.balance.domain.BalanceHistoryRepository;

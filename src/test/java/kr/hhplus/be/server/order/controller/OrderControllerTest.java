@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.controller.order;
+package kr.hhplus.be.server.order.controller;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;

@@ -1,6 +1,5 @@
-package kr.hhplus.be.server.application.coupon;
+package kr.hhplus.be.server.coupon.application;
 
-import kr.hhplus.be.server.coupon.application.CouponService;
 import kr.hhplus.be.server.coupon.domain.Coupon;
 import kr.hhplus.be.server.coupon.domain.CouponPolicy;
 import kr.hhplus.be.server.coupon.domain.CouponPolicyRepository;

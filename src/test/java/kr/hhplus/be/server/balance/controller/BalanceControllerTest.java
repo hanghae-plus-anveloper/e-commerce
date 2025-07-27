@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.controller.balance;
+package kr.hhplus.be.server.balance.controller;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;

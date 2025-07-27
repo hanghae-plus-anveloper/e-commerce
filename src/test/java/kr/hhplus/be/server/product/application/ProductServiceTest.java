@@ -1,10 +1,9 @@
-package kr.hhplus.be.server.application.product;
+package kr.hhplus.be.server.product.application;
 
 import kr.hhplus.be.server.product.controller.ProductResponseDto;
 import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.product.domain.ProductRepository;
 import kr.hhplus.be.server.product.exception.ProductNotFoundException;
-import kr.hhplus.be.server.product.application.ProductService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
