@@ -3,6 +3,7 @@ package kr.hhplus.be.server.facade.user;
 import kr.hhplus.be.server.application.balance.BalanceService;
 import kr.hhplus.be.server.application.user.UserService;
 import kr.hhplus.be.server.controller.user.BalanceResponseDto;
+import kr.hhplus.be.server.domain.balance.Balance;
 import kr.hhplus.be.server.domain.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -34,9 +35,9 @@ public class UserFacade {
     }
 
     @Transactional(readOnly = true)
-    public BalanceResponseDto getBalance(Long userId) {
+    public Balance getBalance(Long userId) {
         User user = userService.findById(userId);
-        return new BalanceResponseDto(user.getId(), user.getBalance().getBalance());
+        return user.getBalance();
     }
 
 }

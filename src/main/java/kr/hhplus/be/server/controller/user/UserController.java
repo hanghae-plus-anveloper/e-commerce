@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.controller.user;
 
+import kr.hhplus.be.server.domain.balance.Balance;
 import kr.hhplus.be.server.facade.user.UserFacade;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -14,14 +15,14 @@ public class UserController implements UserApi {
 
     @Override
     public ResponseEntity<BalanceResponseDto> getBalance(Long userId) {
-        BalanceResponseDto balance = userFacade.getBalance(userId);
-        return ResponseEntity.ok(balance);
+        Balance balance = userFacade.getBalance(userId);
+        return ResponseEntity.ok(new BalanceResponseDto(userId, balance.getBalance()));
     }
 
     @Override
     public ResponseEntity<BalanceResponseDto> chargeBalance(Long userId, ChargeRequestDto request) {
         userFacade.chargeBalance(userId, request.getAmount());
-        BalanceResponseDto balance = userFacade.getBalance(userId);
-        return ResponseEntity.status(201).body(balance);
+        Balance balance = userFacade.getBalance(userId);
+        return ResponseEntity.status(201).body(new BalanceResponseDto(userId, balance.getBalance()));
     }
 }
