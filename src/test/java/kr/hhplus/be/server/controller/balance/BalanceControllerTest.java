@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.controller.user;
+package kr.hhplus.be.server.controller.balance;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -23,7 +23,7 @@ import static org.hamcrest.Matchers.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import(TestcontainersConfiguration.class)
-class UserControllerTest {
+class BalanceControllerTest {
 
     @LocalServerPort
     int port;

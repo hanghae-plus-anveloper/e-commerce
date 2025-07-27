@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.controller.user;
+package kr.hhplus.be.server.controller.balance;
 
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import org.springframework.http.ResponseEntity;
@@ -17,9 +17,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import kr.hhplus.be.server.dto.common.CustomErrorResponse;
 
-@Tag(name = "USER API", description = "사용자 관련 API 입니다.")
-@RequestMapping("/users")
-public interface UserApi {
+@Tag(name = "BALANCE API", description = "사용자의 잔액 관련 API 입니다.")
+@RequestMapping("/users/{userId}/balance")
+public interface BalanceApi {
 
     @Operation(summary = "잔액 조회", description = "사용자의 잔액을 조회합니다.")
     @ApiResponses({
@@ -40,7 +40,7 @@ public interface UserApi {
             )
         )
     })
-    @GetMapping("/{userId}/balance")
+    @GetMapping
     ResponseEntity<BalanceResponseDto> getBalance(@PathVariable Long userId);
 
     @Operation(summary = "잔액 충전", description = "사용자의 잔액을 충전합니다.")
@@ -78,7 +78,7 @@ public interface UserApi {
             )
         )
     })
-    @PostMapping("/{userId}/balance")
+    @PostMapping
     ResponseEntity<BalanceResponseDto> chargeBalance(
         @PathVariable Long userId,
         @Valid @RequestBody ChargeRequestDto request

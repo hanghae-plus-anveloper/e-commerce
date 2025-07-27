@@ -1,8 +1,7 @@
-package kr.hhplus.be.server.facade.user;
+package kr.hhplus.be.server.facade.balance;
 
 import kr.hhplus.be.server.application.balance.BalanceService;
 import kr.hhplus.be.server.application.user.UserService;
-import kr.hhplus.be.server.controller.user.BalanceResponseDto;
 import kr.hhplus.be.server.domain.balance.Balance;
 import kr.hhplus.be.server.domain.user.User;
 import lombok.RequiredArgsConstructor;
@@ -12,26 +11,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
-public class UserFacade {
+public class BalanceFacade {
 
     private final UserService userService;
     private final BalanceService balanceService;
-
-    @Transactional(readOnly = true)
-    public User getUser(Long userId) {
-        return userService.findById(userId);
-    }
 
     @Transactional
     public void chargeBalance(Long userId, int amount) {
         User user = userService.findById(userId);
         balanceService.chargeBalance(user, amount);
-    }
-
-    @Transactional
-    public void useBalance(Long userId, int amount) {
-        User user = userService.findById(userId);
-        balanceService.useBalance(user, amount);
     }
 
     @Transactional(readOnly = true)

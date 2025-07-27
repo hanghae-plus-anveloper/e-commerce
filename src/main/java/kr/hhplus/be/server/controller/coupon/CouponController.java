@@ -1,9 +1,7 @@
 package kr.hhplus.be.server.controller.coupon;
 
 import kr.hhplus.be.server.domain.coupon.Coupon;
-import kr.hhplus.be.server.exception.CouponSoldOutException;
 import kr.hhplus.be.server.facade.coupon.CouponFacade;
-import kr.hhplus.be.server.facade.user.UserFacade;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import lombok.RequiredArgsConstructor;
