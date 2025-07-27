@@ -2,11 +2,11 @@ package kr.hhplus.be.server.controller.coupon;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
-import kr.hhplus.be.server.domain.coupon.CouponPolicy;
-import kr.hhplus.be.server.domain.coupon.CouponPolicyRepository;
-import kr.hhplus.be.server.domain.coupon.CouponRepository;
-import kr.hhplus.be.server.domain.user.User;
-import kr.hhplus.be.server.domain.user.UserRepository;
+import kr.hhplus.be.server.coupon.domain.CouponPolicy;
+import kr.hhplus.be.server.coupon.domain.CouponPolicyRepository;
+import kr.hhplus.be.server.coupon.domain.CouponRepository;
+import kr.hhplus.be.server.user.domain.User;
+import kr.hhplus.be.server.user.domain.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

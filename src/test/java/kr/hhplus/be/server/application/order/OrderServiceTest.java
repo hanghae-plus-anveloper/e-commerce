@@ -1,11 +1,12 @@
 package kr.hhplus.be.server.application.order;
 
-import kr.hhplus.be.server.domain.coupon.Coupon;
-import kr.hhplus.be.server.domain.coupon.CouponPolicy;
-import kr.hhplus.be.server.domain.order.Order;
-import kr.hhplus.be.server.domain.order.OrderItem;
-import kr.hhplus.be.server.domain.order.OrderRepository;
-import kr.hhplus.be.server.domain.order.OrderStatus;
+import kr.hhplus.be.server.coupon.domain.Coupon;
+import kr.hhplus.be.server.coupon.domain.CouponPolicy;
+import kr.hhplus.be.server.order.domain.Order;
+import kr.hhplus.be.server.order.domain.OrderItem;
+import kr.hhplus.be.server.order.domain.OrderRepository;
+import kr.hhplus.be.server.order.domain.OrderStatus;
+import kr.hhplus.be.server.order.application.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

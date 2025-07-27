@@ -2,10 +2,10 @@ package kr.hhplus.be.server.controller.balance;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
-import kr.hhplus.be.server.domain.balance.Balance;
-import kr.hhplus.be.server.domain.balance.BalanceRepository;
-import kr.hhplus.be.server.domain.user.User;
-import kr.hhplus.be.server.domain.user.UserRepository;
+import kr.hhplus.be.server.balance.domain.Balance;
+import kr.hhplus.be.server.balance.domain.BalanceRepository;
+import kr.hhplus.be.server.user.domain.User;
+import kr.hhplus.be.server.user.domain.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -1,18 +1,18 @@
 package kr.hhplus.be.server.application.balance;
 
 
-import kr.hhplus.be.server.domain.balance.Balance;
-import kr.hhplus.be.server.domain.balance.BalanceChangeType;
-import kr.hhplus.be.server.domain.balance.BalanceHistoryRepository;
-import kr.hhplus.be.server.domain.balance.BalanceRepository;
-import kr.hhplus.be.server.domain.user.User;
-import kr.hhplus.be.server.domain.user.UserRepository;
-import kr.hhplus.be.server.exception.InsufficientBalanceException;
+import kr.hhplus.be.server.balance.application.BalanceService;
+import kr.hhplus.be.server.balance.domain.Balance;
+import kr.hhplus.be.server.balance.domain.BalanceChangeType;
+import kr.hhplus.be.server.balance.domain.BalanceHistoryRepository;
+import kr.hhplus.be.server.balance.domain.BalanceRepository;
+import kr.hhplus.be.server.user.domain.User;
+import kr.hhplus.be.server.user.domain.UserRepository;
+import kr.hhplus.be.server.balance.exception.InsufficientBalanceException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;

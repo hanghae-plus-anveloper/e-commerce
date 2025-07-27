@@ -1,9 +1,13 @@
 package kr.hhplus.be.server.application.coupon;
 
-import kr.hhplus.be.server.domain.coupon.*;
-import kr.hhplus.be.server.domain.user.User;
-import kr.hhplus.be.server.exception.CouponSoldOutException;
-import kr.hhplus.be.server.exception.InvalidCouponException;
+import kr.hhplus.be.server.coupon.application.CouponService;
+import kr.hhplus.be.server.coupon.domain.Coupon;
+import kr.hhplus.be.server.coupon.domain.CouponPolicy;
+import kr.hhplus.be.server.coupon.domain.CouponPolicyRepository;
+import kr.hhplus.be.server.coupon.domain.CouponRepository;
+import kr.hhplus.be.server.user.domain.User;
+import kr.hhplus.be.server.coupon.exception.CouponSoldOutException;
+import kr.hhplus.be.server.coupon.exception.InvalidCouponException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
