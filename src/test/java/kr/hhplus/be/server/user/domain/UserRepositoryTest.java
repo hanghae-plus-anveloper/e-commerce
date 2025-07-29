@@ -70,7 +70,7 @@ class UserRepositoryTest {
 
         c1.setUser(user);
         c2.setUser(user);
-        user.getCoupons().addAll(List.of(c1, c2));
+        user.getCoupons().addAll(List.of(c1, c2)); // List<Coupon> coupons = new ArrayList<>(); 초기화 필요
 
         couponRepository.saveAll(java.util.List.of(c1, c2));
 

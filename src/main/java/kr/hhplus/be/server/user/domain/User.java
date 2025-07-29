@@ -11,6 +11,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -33,7 +34,7 @@ public class User {
     private Balance balance;
 
     @OneToMany(mappedBy = "user")
-    private List<Coupon> coupons;
+    private List<Coupon> coupons = new ArrayList<>();
 
     @Builder
     public User(String name) {

@@ -3,14 +3,11 @@ package kr.hhplus.be.server.coupon.domain;
 import jakarta.persistence.*;
 import kr.hhplus.be.server.coupon.exception.InvalidCouponException;
 import kr.hhplus.be.server.user.domain.User;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
