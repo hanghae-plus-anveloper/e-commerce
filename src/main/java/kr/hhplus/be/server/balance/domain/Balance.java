@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import kr.hhplus.be.server.user.domain.User;
+import lombok.Builder;
 import lombok.Getter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ public class Balance {
     protected Balance() {
     }
 
+    @Builder
     public Balance(User user, int balance) {
         this.user = user;
         this.balance = balance;
