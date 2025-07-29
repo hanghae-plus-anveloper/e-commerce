@@ -47,13 +47,14 @@ public class Balance {
     public void charge(int amount) {
         this.balance += amount;
         this.updatedAt = LocalDateTime.now();
-        this.histories.add(new BalanceHistory(this, amount, this.balance, BalanceChangeType.CHARGE));
+        this.histories.add(BalanceHistory.charge(this, amount, this.balance));
     }
 
     public void use(int amount) {
-        if (amount > balance) throw new IllegalArgumentException("잔액 부족");
+        if (amount > balance)
+            throw new IllegalArgumentException("잔액 부족");
         this.balance -= amount;
         this.updatedAt = LocalDateTime.now();
-        this.histories.add(new BalanceHistory(this, -amount, this.balance, BalanceChangeType.USE));
+        this.histories.add(BalanceHistory.use(this, amount, this.balance));
     }
 }
