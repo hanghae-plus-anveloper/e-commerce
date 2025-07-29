@@ -77,120 +77,125 @@ npx --yes file-tree-cli src/test/java --ext java
 
 ```
 ## npx --yes file-tree-cli src/main/java --ext java
-/Workspace/hhplus-e-commerce-java/src/main/java
+/hhplus-e-commerce-java/src/main/java
 └── kr
     └── hhplus
         └── be
             └── server
                 ├── ServerApplication.java
-                ├── application
-                │   ├── balance
+                ├── balance
+                │   ├── application
                 │   │   └── BalanceService.java
-                │   ├── coupon
-                │   │   └── CouponService.java
-                │   ├── order
-                │   │   └── OrderService.java
-                │   ├── product
-                │   │   └── ProductService.java
-                │   └── user
-                │       └── UserService.java
+                │   ├── controller
+                │   │   ├── BalanceApi.java
+                │   │   ├── BalanceController.java
+                │   │   ├── BalanceResponseDto.java
+                │   │   └── ChargeRequestDto.java
+                │   ├── domain
+                │   │   ├── Balance.java
+                │   │   ├── BalanceChangeType.java
+                │   │   ├── BalanceHistory.java
+                │   │   ├── BalanceHistoryRepository.java
+                │   │   └── BalanceRepository.java
+                │   ├── exception
+                │   │   └── InsufficientBalanceException.java
+                │   └── facade
+                │       └── BalanceFacade.java
+                ├── common
+                │   ├── dto
+                │   │   └── CustomErrorResponse.java
+                │   └── exception
+                │       └── GlobalExceptionHandler.java
                 ├── config
                 │   ├── jpa
                 │   │   └── JpaConfig.java
                 │   └── swagger
                 │       └── SwaggerConfig.java
-                ├── controller
-                │   ├── coupon
+                ├── coupon
+                │   ├── application
+                │   │   └── CouponService.java
+                │   ├── controller
                 │   │   ├── CouponApi.java
                 │   │   ├── CouponController.java
                 │   │   └── CouponResponseDto.java
-                │   ├── order
+                │   ├── domain
+                │   │   ├── Coupon.java
+                │   │   ├── CouponPolicy.java
+                │   │   ├── CouponPolicyRepository.java
+                │   │   └── CouponRepository.java
+                │   ├── exception
+                │   │   ├── CouponSoldOutException.java
+                │   │   └── InvalidCouponException.java
+                │   └── facade
+                │       └── CouponFacade.java
+                ├── order
+                │   ├── application
+                │   │   └── OrderService.java
+                │   ├── controller
                 │   │   ├── OrderApi.java
                 │   │   ├── OrderController.java
                 │   │   ├── OrderItemRequestDto.java
                 │   │   ├── OrderRequestDto.java
                 │   │   └── OrderResponseDto.java
-                │   ├── product
+                │   ├── domain
+                │   │   ├── Order.java
+                │   │   ├── OrderItem.java
+                │   │   ├── OrderRepository.java
+                │   │   └── OrderStatus.java
+                │   └── facade
+                │       └── OrderFacade.java
+                ├── product
+                │   ├── application
+                │   │   └── ProductService.java
+                │   ├── controller
                 │   │   ├── ProductApi.java
                 │   │   ├── ProductController.java
                 │   │   ├── ProductResponseDto.java
                 │   │   ├── ProductStatisticsApi.java
                 │   │   ├── ProductStatisticsController.java
                 │   │   └── TopProductResponseDto.java
-                │   └── user
-                │       ├── BalanceResponseDto.java
-                │       ├── ChargeRequestDto.java
-                │       ├── UserApi.java
-                │       └── UserController.java
-                ├── domain
-                │   ├── balance
-                │   │   ├── Balance.java
-                │   │   ├── BalanceChangeType.java
-                │   │   ├── BalanceHistory.java
-                │   │   └── BalanceRepository.java
-                │   ├── coupon
-                │   │   ├── Coupon.java
-                │   │   ├── CouponPolicy.java
-                │   │   ├── CouponPolicyRepository.java
-                │   │   └── CouponRepository.java
-                │   ├── order
-                │   │   ├── Order.java
-                │   │   ├── OrderItem.java
-                │   │   ├── OrderRepository.java
-                │   │   └── OrderStatus.java
-                │   ├── product
+                │   ├── domain
                 │   │   ├── Product.java
                 │   │   └── ProductRepository.java
-                │   └── user
-                │       ├── User.java
-                │       └── UserRepository.java
-                ├── dto
-                │   └── common
-                │       └── CustomErrorResponse.java
-                ├── exception
-                │   ├── CouponSoldOutException.java
-                │   ├── GlobalExceptionHandler.java
-                │   ├── InsufficientBalanceException.java
-                │   ├── InvalidCouponException.java
-                │   ├── ProductNotFoundException.java
-                │   └── UserNotFoundException.java
-                ├── facade
-                │   ├── coupon
-                │   │   └── CouponFacade.java
-                │   ├── order
-                │   │   └── OrderFacade.java
-                │   └── user
-                │       └── UserFacade.java
-                └── infrastructure
-                    └── external
-                        └── NotificationService.java
+                │   └── exception
+                │       └── ProductNotFoundException.java
+                └── user
+                    ├── application
+                    │   └── UserService.java
+                    ├── domain
+                    │   ├── User.java
+                    │   └── UserRepository.java
+                    └── exception
+                        └── UserNotFoundException.java
 
 ## npx --yes file-tree-cli src/test/java --ext java
-/Workspace/hhplus-e-commerce-java/src/test/java
+/hhplus-e-commerce-java/src/test/java
 └── kr
     └── hhplus
         └── be
             └── server
                 ├── ServerApplicationTests.java
                 ├── TestcontainersConfiguration.java
-                ├── application
-                │   ├── balance
+                ├── balance
+                │   ├── application
                 │   │   └── BalanceServiceTest.java
-                │   ├── coupon
+                │   ├── controller
+                │   │   └── BalanceControllerTest.java
+                │   └── domain
+                │       └── BalanceRepositoryTest.java
+                ├── coupon
+                │   ├── application
                 │   │   └── CouponServiceTest.java
-                │   ├── order
+                │   └── controller
+                │       └── CouponControllerTest.java
+                ├── order
+                │   ├── application
                 │   │   └── OrderServiceTest.java
-                │   └── product
-                │       └── ProductServiceTest.java
-                ├── controller
-                │   ├── coupon
-                │   │   └── CouponControllerTest.java
-                │   ├── order
-                │   │   └── OrderControllerTest.java
-                │   └── user
-                │       └── UserControllerTest.java
-                └── domain
-                    └── BalanceRepositoryTest.java
+                │   └── controller
+                │       └── OrderControllerTest.java
+                └── product
+                    └── application
+                        └── ProductServiceTest.java
 
 ```
 
