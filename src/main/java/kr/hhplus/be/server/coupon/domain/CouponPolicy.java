@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
+@Table(name = "coupon_policy")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder

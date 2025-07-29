@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Entity
-@Table(name = "BALANCE_HISTORY")
+@Table(name = "balance_history")
 public class BalanceHistory {
 
     @Id

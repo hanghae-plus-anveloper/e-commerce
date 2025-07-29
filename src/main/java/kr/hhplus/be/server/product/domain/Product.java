@@ -1,13 +1,18 @@
 package kr.hhplus.be.server.product.domain;
 
 import jakarta.persistence.*;
+import kr.hhplus.be.server.order.domain.OrderItem;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
 @NoArgsConstructor
-@Table(name = "PRODUCT")
+@Table(name = "product")
 public class Product {
 
     @Id
@@ -20,9 +25,14 @@ public class Product {
 
     private int stock;
 
+    @OneToMany(mappedBy = "product")
+    private List<OrderItem> orderItems = new ArrayList<>();
+
     @Version
     private int version; // 낙관적 락 추가
 
+
+    @Builder
     public Product(String name, int price, int stock) {
         this.name = name;
         this.price = price;

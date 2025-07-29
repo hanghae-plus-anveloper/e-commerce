@@ -2,6 +2,7 @@ package kr.hhplus.be.server.coupon.domain;
 
 import jakarta.persistence.*;
 import kr.hhplus.be.server.coupon.exception.InvalidCouponException;
+import kr.hhplus.be.server.user.domain.User;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,7 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-@Table(name = "COUPON")
+@Table(name = "coupon")
 public class Coupon {
 
     @Id
@@ -24,8 +25,9 @@ public class Coupon {
     @JoinColumn(name = "policy_id", nullable = false)
     private CouponPolicy policy;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     private int discountAmount; // 정액 할인
     private double discountRate; // 정률 할인

@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.order.domain;
 
 import jakarta.persistence.*;
+import kr.hhplus.be.server.user.domain.User;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,14 +13,16 @@ import java.util.List;
 @Entity
 @Getter
 @NoArgsConstructor
-@Table(name = "`ORDER`")
+@Table(name = "`order`")
 public class Order {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     private int totalAmount;
 
@@ -27,18 +30,23 @@ public class Order {
     private OrderStatus status;
 
     @Temporal(TemporalType.TIMESTAMP)
-    private Date createdAt;
+    private Date orderedAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 
-    public static Order create(Long userId, List<OrderItem> items, int totalAmount) {
+    public static Order create(User user, List<OrderItem> items, int totalAmount) {
         Order order = new Order();
-        order.userId = userId;
+        order.user = user;
         order.items.addAll(items);
         order.status = OrderStatus.DRAFT;
-        order.createdAt = new Date();
-        items.forEach(item -> item.setOrder(order));
+        order.orderedAt = new Date();
+        for (OrderItem item : items) {
+            item.setOrder(order);
+            item.setOrderedAt(order.orderedAt); // 반정규화된 필드 동기화
+        }
+
+        order.items.addAll(items);
         order.totalAmount = totalAmount;
         return order;
     }
