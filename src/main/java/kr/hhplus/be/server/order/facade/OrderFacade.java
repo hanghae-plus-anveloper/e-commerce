@@ -5,6 +5,7 @@ import kr.hhplus.be.server.balance.application.BalanceService;
 import kr.hhplus.be.server.coupon.application.CouponService;
 import kr.hhplus.be.server.order.application.OrderService;
 import kr.hhplus.be.server.product.application.ProductService;
+import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.user.application.UserService;
 import kr.hhplus.be.server.order.controller.OrderItemRequestDto;
 import kr.hhplus.be.server.coupon.domain.Coupon;
@@ -27,13 +28,13 @@ public class OrderFacade {
     private final BalanceService balanceService;
 
     @Transactional
-    public Order placeOrder(Long userId, List<OrderItemRequestDto> itemDtos, Long couponId) {
+    public Order placeOrder(Long userId, List<OrderItemCommand> itemDtos, Long couponId) {
         User user = userService.findById(userId);
 
         List<OrderItem> items = itemDtos.stream()
                 .map(dto -> {
-                    int price = productService.verifyDecreaseStock(dto.getProductId(), dto.getQuantity());
-                    return OrderItem.of(dto.getProductId(), price, dto.getQuantity(), 0);
+                    Product product = productService.verifyAndDecreaseStock(dto.getProductId(), dto.getQuantity());
+                    return OrderItem.of(product, product.getPrice(), dto.getQuantity(), 0);
                 })
                 .toList();
 
@@ -53,7 +54,7 @@ public class OrderFacade {
 
         balanceService.useBalance(user, total);
 
-        return orderService.createOrder(user.getId(), items, total);
+        return orderService.createOrder(user, items, total);
     }
 
 }
