@@ -33,7 +33,7 @@ public class User {
     @JsonManagedReference
     private Balance balance;
 
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Coupon> coupons = new ArrayList<>();
 
     @Builder
