@@ -1,13 +1,24 @@
 package kr.hhplus.be.server.balance.domain;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import jakarta.persistence.*;
-import kr.hhplus.be.server.user.domain.User;
-import lombok.Getter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import kr.hhplus.be.server.user.domain.User;
+import lombok.Getter;
 
 @Getter
 @Entity
@@ -45,13 +56,14 @@ public class Balance {
     public void charge(int amount) {
         this.balance += amount;
         this.updatedAt = LocalDateTime.now();
-        this.histories.add(new BalanceHistory(this, amount, this.balance, BalanceChangeType.CHARGE));
+        this.histories.add(BalanceHistory.charge(this, amount, this.balance));
     }
 
     public void use(int amount) {
-        if (amount > balance) throw new IllegalArgumentException("잔액 부족");
+        if (amount > balance)
+            throw new IllegalArgumentException("잔액 부족");
         this.balance -= amount;
         this.updatedAt = LocalDateTime.now();
-        this.histories.add(new BalanceHistory(this, -amount, this.balance, BalanceChangeType.USE));
+        this.histories.add(BalanceHistory.use(this, amount, this.balance));
     }
 }

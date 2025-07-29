@@ -1,11 +1,19 @@
 package kr.hhplus.be.server.balance.domain;
 
+import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import jakarta.persistence.*;
-import lombok.Getter;
 
-import java.time.LocalDateTime;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.Getter;
 
 @Getter
 @Entity
@@ -33,7 +41,8 @@ public class BalanceHistory {
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
-    protected BalanceHistory() {}
+    protected BalanceHistory() {
+    }
 
     public BalanceHistory(Balance balance, int amount, int remainingBalance, BalanceChangeType type) {
         this.balance = balance;
@@ -41,5 +50,13 @@ public class BalanceHistory {
         this.remainingBalance = remainingBalance;
         this.type = type;
         this.timestamp = LocalDateTime.now();
+    }
+
+    public static BalanceHistory charge(Balance balance, int amount, int remainingBalance) {
+        return new BalanceHistory(balance, amount, remainingBalance, BalanceChangeType.CHARGE);
+    }
+
+    public static BalanceHistory use(Balance balance, int amount, int remainingBalance) {
+        return new BalanceHistory(balance, -amount, remainingBalance, BalanceChangeType.USE);
     }
 }
