@@ -49,7 +49,7 @@ class CouponServiceTest {
         Coupon coupon = couponService.issueCoupon(user, 1L);
 
         assertThat(coupon).isNotNull();
-        assertThat(coupon.getUserId()).isEqualTo(user.getId());
+        assertThat(coupon.getUser()).isEqualTo(user);
         assertThat(coupon.getPolicy()).isEqualTo(policy);
         assertThat(coupon.isUsed()).isFalse();
     }

@@ -15,26 +15,22 @@ import java.util.List;
 public class ProductService {
     private final ProductRepository productRepository;
 
-    public List<ProductResponseDto> getAllProducts() {
-        return productRepository.findAll().stream()
-                .map(ProductResponseDto::from)
-                .toList();
+    public List<Product> findAll() {
+        return productRepository.findAll();
     }
 
-    public ProductResponseDto getProductById(Long productId) {
-        Product product = productRepository.findById(productId)
+    public Product findById(Long productId) {
+        return productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
-        return ProductResponseDto.from(product);
     }
 
     @Transactional
-    public int verifyDecreaseStock(Long productId, int requiredQuantity) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
+    public Product verifyAndDecreaseStock(Long productId, int requiredQuantity) {
+        Product product = findById(productId);
         if (product.getStock() < requiredQuantity) {
             throw new IllegalStateException("상품 재고가 부족합니다.");
         }
         product.decreaseStock(requiredQuantity);
-        return product.getPrice();
+        return product;
     }
 }

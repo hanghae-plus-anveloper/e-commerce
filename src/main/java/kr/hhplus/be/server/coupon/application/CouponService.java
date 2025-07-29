@@ -32,7 +32,7 @@ public class CouponService {
 
         Coupon coupon = Coupon.builder()
                 .policy(policy)
-                .userId(user.getId())
+                .user(user)
                 .discountAmount(policy.getDiscountAmount())
                 .discountRate(policy.getDiscountRate())
                 .used(false)

@@ -86,7 +86,7 @@ class OrderControllerTest {
         Coupon coupon = new Coupon(
                 null,
                 policy,
-                userId,
+                user,
                 policy.getDiscountAmount(),
                 policy.getDiscountRate(),
                 false
