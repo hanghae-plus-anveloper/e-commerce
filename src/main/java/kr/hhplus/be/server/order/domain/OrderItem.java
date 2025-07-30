@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Entity
@@ -23,8 +24,7 @@ public class OrderItem {
     private int discountAmount;
 
     @Setter
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date orderedAt; // 역정규화: OrderItem이 아닌 Order의 생성시점이며, Order 생성자에서 Setter로 직접 주입
+    private LocalDateTime orderedAt; // 역정규화: OrderItem이 아닌 Order의 생성시점이며, Order 생성자에서 Setter로 직접 주입
 
     @Setter
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

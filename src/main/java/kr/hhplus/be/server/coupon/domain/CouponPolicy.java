@@ -1,14 +1,10 @@
 package kr.hhplus.be.server.coupon.domain;
 
-import java.util.Date;
-
 import jakarta.persistence.*;
 import kr.hhplus.be.server.coupon.exception.CouponSoldOutException;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -32,15 +28,13 @@ public class CouponPolicy {
     @Version
     private int version;            // 낙관적 락 추가
 
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date startedAt;
+    private LocalDateTime startedAt;
 
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date endedAt;
+    private LocalDateTime endedAt;
 
     public boolean isWithinPeriod() {
-        Date now = new Date();
-        return !now.before(startedAt) && !now.after(endedAt);
+        LocalDateTime now = LocalDateTime.now();
+        return !now.isBefore(startedAt) && !now.isAfter(endedAt);
     }
 
     public boolean hasRemainingCount() {
