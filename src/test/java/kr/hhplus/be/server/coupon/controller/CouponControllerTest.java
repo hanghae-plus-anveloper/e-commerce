@@ -16,7 +16,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
@@ -57,8 +57,8 @@ class CouponControllerTest {
                 .availableCount(10)
                 .remainingCount(10)
                 .expireDays(30)
-                .startedAt(new Date(System.currentTimeMillis() - 1000 * 60)) // 과거 시작
-                .endedAt(new Date(System.currentTimeMillis() + 1000 * 60 * 60)) // 미래 종료
+                .startedAt(LocalDateTime.now().minusMinutes(1))
+                .endedAt(LocalDateTime.now().plusHours(1))
                 .build();
         policyId = couponPolicyRepository.save(policy).getId();
     }

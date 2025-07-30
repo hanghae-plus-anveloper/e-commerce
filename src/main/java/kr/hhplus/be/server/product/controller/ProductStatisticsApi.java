@@ -26,3 +26,4 @@ public interface ProductStatisticsApi {
     @GetMapping("/top")
     ResponseEntity<List<TopProductResponseDto>> getTopProducts();
 }
+// Swagger 작성때 만들었으나, 미사용 >> Order 쿼리 조회 방식으로 구현예정

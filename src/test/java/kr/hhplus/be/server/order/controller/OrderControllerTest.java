@@ -22,7 +22,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -80,8 +80,8 @@ class OrderControllerTest {
                 .availableCount(10)
                 .remainingCount(10)
                 .expireDays(7)
-                .startedAt(new Date(System.currentTimeMillis() - 1000 * 60))
-                .endedAt(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
+                .startedAt(LocalDateTime.now().minusMinutes(1))
+                .endedAt(LocalDateTime.now().plusHours(1))
                 .build());
         Coupon coupon = new Coupon(
                 null,

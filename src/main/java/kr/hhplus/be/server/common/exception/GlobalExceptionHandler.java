@@ -6,6 +6,7 @@ import kr.hhplus.be.server.balance.exception.InsufficientBalanceException;
 import kr.hhplus.be.server.coupon.exception.CouponSoldOutException;
 import kr.hhplus.be.server.coupon.exception.InvalidCouponException;
 import kr.hhplus.be.server.common.dto.CustomErrorResponse;
+import kr.hhplus.be.server.product.exception.ProductNotFoundException;
 import kr.hhplus.be.server.user.exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -62,6 +63,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new CustomErrorResponse(ex.getMessage(), HttpStatus.NOT_FOUND.value()));
     }
+
+    @ExceptionHandler(ProductNotFoundException.class)
+    public ResponseEntity<?> handleProductNotFound(ProductNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                        "status", 404,
+                        "message", e.getMessage()
+                ));
+    }
+
 
     // 그 외 모든 예외 처리
     @ExceptionHandler(Exception.class)

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Optional;
 
@@ -39,8 +40,8 @@ class CouponServiceTest {
                 .availableCount(10)
                 .remainingCount(10)
                 .expireDays(30)
-                .startedAt(new Date(System.currentTimeMillis() - 1000))
-                .endedAt(new Date(System.currentTimeMillis() + 1000 * 60))
+                .startedAt(LocalDateTime.now().minusMinutes(1))
+                .endedAt(LocalDateTime.now().plusHours(1))
                 .build();
 
         when(couponPolicyRepository.findById(1L)).thenReturn(Optional.of(policy));
@@ -76,8 +77,8 @@ class CouponServiceTest {
                 .availableCount(10)
                 .remainingCount(10)
                 .expireDays(30)
-                .startedAt(new Date(System.currentTimeMillis() - 100000))
-                .endedAt(new Date(System.currentTimeMillis() - 1000)) // 만료
+                .startedAt(LocalDateTime.now().minusMinutes(10))
+                .endedAt(LocalDateTime.now().plusHours(1))
                 .build();
 
         when(couponPolicyRepository.findById(2L)).thenReturn(Optional.of(expiredPolicy));
@@ -98,8 +99,8 @@ class CouponServiceTest {
                 .availableCount(10)
                 .remainingCount(0) // 수량 없음
                 .expireDays(30)
-                .startedAt(new Date(System.currentTimeMillis() - 1000))
-                .endedAt(new Date(System.currentTimeMillis() + 1000 * 60))
+                .startedAt(LocalDateTime.now().minusMinutes(1))
+                .endedAt(LocalDateTime.now().plusHours(1))
                 .build();
 
         when(couponPolicyRepository.findById(3L)).thenReturn(Optional.of(soldOutPolicy));
