@@ -8,7 +8,9 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
-@Table(name = "coupon_policy")
+@Table(name = "coupon_policy", indexes = {
+        @Index(name = "idx_coupon_policy_period", columnList = "started_at, ended_at")
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder

@@ -4,20 +4,15 @@ import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 
 @Getter
 @Entity
-@Table(name = "balance_history")
+@Table(name = "balance_history", indexes = {
+        @Index(name = "idx_balance_history_timestamp", columnList = "timestamp"), // 검색 및 조회 목적
+        @Index(name = "idx_balance_history_type", columnList = "type") // 필터 목적
+})
 public class BalanceHistory {
 
     @Id

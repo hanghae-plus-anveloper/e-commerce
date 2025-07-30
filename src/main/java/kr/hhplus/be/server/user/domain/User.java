@@ -18,7 +18,9 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
-@Table(name = "`user`")
+@Table(name = "`user`", indexes = {
+        @Index(name = "idx_user_name", columnList = "name") // 사용자 이름으로 조회 목적
+})
 public class User {
 
 

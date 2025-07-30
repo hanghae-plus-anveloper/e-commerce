@@ -11,7 +11,10 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-@Table(name = "coupon")
+@Table(name = "coupon", indexes = {
+        @Index(name = "idx_coupon_user_used", columnList = "user_id, used"), // 사용 여부 필터 조회 용 목적
+        @Index(name = "idx_coupon_policy_user", columnList = "policy_id, user_id"), // 중복 발급 방지 등 정책 기준 비즈니스 목적
+})
 public class Coupon {
 
     @Id

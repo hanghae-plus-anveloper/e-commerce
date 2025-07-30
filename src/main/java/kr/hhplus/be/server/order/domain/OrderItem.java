@@ -12,7 +12,11 @@ import java.util.Date;
 @Entity
 @Getter
 @NoArgsConstructor
-@Table(name = "order_item")
+@Table(name = "order_item", indexes = {
+        @Index(name = "idx_order_item_ordered_product", columnList = "ordered_at, product_id"), // 통계용 복합, 반정규화 한 ordered_at 으로 3일 이내 TOP 5 목적 방법2
+        @Index(name = "idx_order_item_product_ordered", columnList = "product_id, ordered_at"), // 상품 → 날짜 순서 차이 테스트용 목적
+        @Index(name = "idx_order_item_ordered_at", columnList = "ordered_at"), // 날짜 필터
+})
 public class OrderItem {
 
     @Id
