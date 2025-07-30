@@ -38,9 +38,9 @@ public class Order {
     public static Order create(User user, List<OrderItem> items, int totalAmount) {
         Order order = new Order();
         order.user = user;
-        order.items.addAll(items);
         order.status = OrderStatus.DRAFT;
         order.orderedAt = LocalDateTime.now();
+
         for (OrderItem item : items) {
             item.setOrder(order);
             item.setOrderedAt(order.orderedAt); // 반정규화된 필드 동기화
