@@ -189,7 +189,7 @@ npx --yes file-tree-cli src/test/java --ext java
                 │   │   ├── BalanceRepositoryIntegrationTest.java
                 │   │   ├── BalanceRepositoryTest.java
                 │   │   └── BalanceTest.java
-                │   └── facede
+                │   └── facade
                 │       └── BalanceFacadeTest.java
                 ├── coupon
                 │   ├── application
@@ -208,11 +208,13 @@ npx --yes file-tree-cli src/test/java --ext java
                 │   │   └── OrderServiceTest.java
                 │   ├── controller
                 │   │   └── OrderControllerTest.java
-                │   └── domain
-                │       ├── OrderItemTest.java
-                │       ├── OrderRepositoryIntegrationTest.java
-                │       ├── OrderRepositoryTest.java
-                │       └── OrderTest.java
+                │   ├── domain
+                │   │   ├── OrderItemTest.java
+                │   │   ├── OrderRepositoryIntegrationTest.java
+                │   │   ├── OrderRepositoryTest.java
+                │   │   └── OrderTest.java
+                │   └── facade
+                │       └── OrderFacadeTest.java
                 ├── product
                 │   ├── application
                 │   │   └── ProductServiceTest.java
