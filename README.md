@@ -77,7 +77,7 @@ npx --yes file-tree-cli src/test/java --ext java
 
 ```
 ## npx --yes file-tree-cli src/main/java --ext java
-/hhplus-e-commerce-java/src/main/java
+/Workspace/hhplus-e-commerce-java/src/main/java
 └── kr
     └── hhplus
         └── be
@@ -140,10 +140,13 @@ npx --yes file-tree-cli src/test/java --ext java
                 │   ├── domain
                 │   │   ├── Order.java
                 │   │   ├── OrderItem.java
+                │   │   ├── OrderItemRepository.java
                 │   │   ├── OrderRepository.java
                 │   │   └── OrderStatus.java
                 │   └── facade
-                │       └── OrderFacade.java
+                │       ├── OrderCommandMapper.java
+                │       ├── OrderFacade.java
+                │       └── OrderItemCommand.java
                 ├── product
                 │   ├── application
                 │   │   └── ProductService.java
@@ -168,8 +171,9 @@ npx --yes file-tree-cli src/test/java --ext java
                     └── exception
                         └── UserNotFoundException.java
 
+
 ## npx --yes file-tree-cli src/test/java --ext java
-/hhplus-e-commerce-java/src/test/java
+/Workspace/hhplus-e-commerce-java/src/test/java
 └── kr
     └── hhplus
         └── be
@@ -181,21 +185,51 @@ npx --yes file-tree-cli src/test/java --ext java
                 │   │   └── BalanceServiceTest.java
                 │   ├── controller
                 │   │   └── BalanceControllerTest.java
-                │   └── domain
-                │       └── BalanceRepositoryTest.java
+                │   ├── domain
+                │   │   ├── BalanceRepositoryIntegrationTest.java
+                │   │   ├── BalanceRepositoryTest.java
+                │   │   └── BalanceTest.java
+                │   └── facede
+                │       └── BalanceFacadeTest.java
                 ├── coupon
                 │   ├── application
                 │   │   └── CouponServiceTest.java
-                │   └── controller
-                │       └── CouponControllerTest.java
+                │   ├── controller
+                │   │   └── CouponControllerTest.java
+                │   ├── domain
+                │   │   ├── CouponPolicyTest.java
+                │   │   ├── CouponRepositoryIntegrationTest.java
+                │   │   ├── CouponRepositoryTest.java
+                │   │   └── CouponTest.java
+                │   └── facade
+                │       └── CouponFacadeTest.java
                 ├── order
                 │   ├── application
                 │   │   └── OrderServiceTest.java
-                │   └── controller
-                │       └── OrderControllerTest.java
-                └── product
-                    └── application
-                        └── ProductServiceTest.java
+                │   ├── controller
+                │   │   └── OrderControllerTest.java
+                │   └── domain
+                │       ├── OrderItemTest.java
+                │       ├── OrderRepositoryIntegrationTest.java
+                │       ├── OrderRepositoryTest.java
+                │       └── OrderTest.java
+                ├── product
+                │   ├── application
+                │   │   └── ProductServiceTest.java
+                │   ├── controller
+                │   │   └── ProductControllerTest.java
+                │   └── domain
+                │       ├── ProductRepositoryIntegrationTest.java
+                │       ├── ProductRepositoryTest.java
+                │       └── ProductTest.java
+                └── user
+                    ├── application
+                    │   └── UserServiceTest.java
+                    └── domain
+                        ├── UserRepositoryIntegrationTest.java
+                        ├── UserRepositoryTest.java
+                        └── UserTest.java
+
 
 ```
 
