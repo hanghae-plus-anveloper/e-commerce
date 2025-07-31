@@ -49,7 +49,7 @@ LIMIT 5;
   | table | type  | possible_keys                                                                           | key                          | key_len | rows     | filtered | Extra                                                     |
   | ----- | ----- |-----------------------------------------------------------------------------------------|------------------------------|---------|----------|----------|-----------------------------------------------------------|
   | `o`   | range | PRIMARY,idx_order_ordered_at                                                            | idx_order_ordered_at         | 9       | 3000     | 100.0    | Using where; Using index; Using temporary; Using filesort |
-  | `oi`  | ref   | FKs234mi6jususbx4b37k44cipy,FK551losx9j75ss5d6bfsqvijna,idx_order_item_ordered_product  | FKs234mi6jususbx4b37k44cipy  |  9      | 2        | 100.0    |  NULL                                                     |
+  | `oi`  | ref   | FKs234mi6jususbx4b37k44cipy,<br>FK551losx9j75ss5d6bfsqvijna,<br>idx_order_item_ordered_product  | FKs234mi6jususbx4b37k44cipy  |  9      | 2        | 100.0    |  NULL                                                     |
 
 - 장점: 논리적으로 명확하며, 정규화 모델에 적합
 - 단점: 조인 비용이 발생하며, 조인된 결과를 다시 Grouping/정렬해야 하므로 임시 테이블/정렬 비용이 큼
@@ -75,7 +75,7 @@ LIMIT 5;
  
   | table | type   | possible_keys                                          | key                          | key_len | `rows` | filtered | Extra                                         |
   |-------|--------|--------------------------------------------------------|------------------------------|---------|--------|----------|-----------------------------------------------|
-  | oi    | index  | FK551losx9j75ss5d6bfsqvijna,idx_order_item_ordered_at  | FK551losx9j75ss5d6bfsqvijna  | 8       | 20230  | 29.66    | Using where; Using temporary; Using filesort  |
+  | oi    | index  | FK551losx9j75ss5d6bfsqvijna,<br>idx_order_item_ordered_at  | FK551losx9j75ss5d6bfsqvijna  | 8       | 20230  | 29.66    | Using where; Using temporary; Using filesort  |
 
 - 장점: 조인을 제거하여 단순화된 쿼리, 불필요한 Join 제거
 - 단점: ordered_at만 필터링하여 product_id 그룹핑/정렬은 여전히 비용 발생
@@ -106,7 +106,7 @@ CREATE INDEX idx_order_item_ordered_product ON order_item (ordered_at, product_i
 
   | table | type   | possible_keys                                              | key                          | key_len | `rows` | filtered | Extra                                         |
   |-------|--------|------------------------------------------------------------|------------------------------|---------|--------|----------|-----------------------------------------------|
-  | oi    | index  | FK551losx9j75ss5d6bfsqvijna,idx_order_item_ordered_product | FK551losx9j75ss5d6bfsqvijna  | 8       | 20230  | 50.0     | Using where; Using temporary; Using filesort  |
+  | oi    | index  | FK551losx9j75ss5d6bfsqvijna,<br>idx_order_item_ordered_product | FK551losx9j75ss5d6bfsqvijna  | 8       | 20230  | 50.0     | Using where; Using temporary; Using filesort  |
 
 - 장점:
   - ordered_at 범위 필터링을 위해 인덱스 range scan 가능
