@@ -29,10 +29,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import(TestcontainersConfiguration.class) // 생략해도 동작
 class UserRepositoryIntegrationTest {
 
-    @Autowired private UserRepository userRepository;
-    @Autowired private BalanceRepository balanceRepository;
-    @Autowired private CouponRepository couponRepository;
-    @Autowired private CouponPolicyRepository couponPolicyRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private BalanceRepository balanceRepository;
+    @Autowired
+    private CouponRepository couponRepository;
+    @Autowired
+    private CouponPolicyRepository couponPolicyRepository;
 
     @BeforeEach
     void setUp() {
@@ -83,16 +87,8 @@ class UserRepositoryIntegrationTest {
                         .build()
         );
 
-        Coupon c1 = Coupon.builder()
-                .user(user)
-                .policy(policy)
-                .discountAmount(1000)
-                .build();
-        Coupon c2 = Coupon.builder()
-                .user(user)
-                .policy(policy)
-                .discountAmount(2000)
-                .build();
+        Coupon c1 = Coupon.builder().user(user).policy(policy).discountAmount(1000).build();
+        Coupon c2 = Coupon.builder().user(user).policy(policy).discountAmount(2000).build();
 
         user.getCoupons().add(c1); // DataJpaTest에선 없이도 성공
         user.getCoupons().add(c2);
