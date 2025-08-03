@@ -77,8 +77,8 @@ class CouponServiceTest {
                 .availableCount(10)
                 .remainingCount(10)
                 .expireDays(30)
-                .startedAt(LocalDateTime.now().minusMinutes(10))
-                .endedAt(LocalDateTime.now().plusHours(1))
+                .startedAt(LocalDateTime.now().minusHours(2))
+                .endedAt(LocalDateTime.now().minusHours(1))
                 .build();
 
         when(couponPolicyRepository.findById(2L)).thenReturn(Optional.of(expiredPolicy));
