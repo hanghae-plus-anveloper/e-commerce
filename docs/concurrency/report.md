@@ -4,6 +4,9 @@
 
 > 동시성은 **여러 작업이 독립적으로 실행**되며, 그 실행이 **논리적으로 동시에 일어나는 것처럼**보이게 하는 프로그래밍 기법
 
+<details><summary>동시성으로 인한 문제</summary>
+
+
 ## 동시성으로 인한 문제
 
 ### 1. **경쟁 상태, 경쟁 조건(Race condition)**
@@ -45,6 +48,9 @@
 ### 5. 우선순위 역전(Priority Inversion)
 
 - 실시간 시스템에서 낮은 우선순위의 태스크가 높은 우선순위의 태스크보다 먼저 자원을 점유하여 높은 우선순위 태스크의 실행을 지연시키는 문제
+
+
+</details>
 
 ## E-commerce 서비스에서 예측되는 동시성 문제
 
@@ -140,6 +146,7 @@
   - 예측 트래픽: `사용자 수에 비례` – 수천~수만 트랜잭션까지 병행 가능
   - 실패 감내: `불가` – 재고 차감 실패 시 물류, 환불, 품절 처리 등 직접적인 운영 비용 발생
 - 해결 방법: `비관적 락(PESSIMISTIC_WRITE)`
+  
   ```java
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT p FROM Product p WHERE p.id = :id")
@@ -155,6 +162,7 @@
   - 예측 트래픽: `폭발적` – 몇 초간 수천 건 이상의 발급 요청 가능
   - 실패 감내: `일정 수준 허용 가능` – 마케팅 이슈로 감내/보상 가능한 수준의 실패 수용 가능 ( or 감내 불가? )
 - 해결 방법: `비관적 락`, `재시도를 포함한 낙관적 락`, 또는 `조건부 업데이트(Optimistic 방식)` ✅ 기반 처리
+  
   ```java
   @Modifying
   @Query("""
@@ -176,6 +184,7 @@
   - 예측 트래픽: 낮음 – 동일 쿠폰을 한 사용자가 두 번 이상 요청할 경우에 한정
   - 실패 감내: 허용 가능 – 중복 사용 감지 시 하나의 주문만 실패해도 문제 없음
 - 해결 방법: `조건부 업데이트 (Optimistic 방식)`
+  
   ```java
   @Modifying(clearAutomatically = true) // 자동 초기화
   @Query("""
@@ -196,6 +205,7 @@
   - 예측 트래픽: 중간 - 악의적으로 혹은 전송의 오류로 인하여 여러 요청을 보낼 수 있음
   - 실패 감내: 허용 가능 - 한 주문의 통과하고, 그 외 일부 주문의 실패는 사용자 한명에게 치명적이지 않고, 오류 메세지로 충분히 반환 가능함
 - 해결 방법: `낙관적 락(Optimistic Lock)`, JPA `@Version` 활용
+  
   ```java
   @Entity
   @Table(name = "balance")
@@ -229,18 +239,21 @@
   - 접근 순서 일관화
     - 다른 트렌젝션을 포함하여 항상 Product → Coupon → Balance 순의 접근으로 프로세스 구현
   - 배열 자원 정렬
-    - `IN` 절로 여러 상품을 조회하는 경우 반드시 PK 순으로 정렬 
-    ```java
-    @Query("SELECT p FROM Product p WHERE p.id IN :ids ORDER BY p.id")
-    List<Product> findAllByIdWithLock(@Param("ids") List<Long> ids);
-    ```
+    - `IN` 절로 여러 상품을 조회하는 경우 반드시 PK 순으로 정렬
+
+      ```java
+      @Query("SELECT p FROM Product p WHERE p.id IN :ids ORDER BY p.id")
+      List<Product> findAllByIdWithLock(@Param("ids") List<Long> ids);
+      ```
+
     - 혹은 주문 상품을 순회하여 재고를 차감하는 경우 배열을 정렬
-    ```java
-    List<OrderItem> items = orderItems.stream()
-            .sorted(Comparator.comparing(OrderItemCommand::getProductId)) // 상품 순서 정렬
-            .map(command -> {
-                    Product product = productService.verifyAndDecreaseStock(command.getProductId(), command.getQuantity());
-                    return OrderItem.of(product, product.getPrice(), command.getQuantity(), 0);
-            }) 
-            .toList();
-    ```
+
+      ```java
+      List<OrderItem> items = orderItems.stream()
+          .sorted(Comparator.comparing(OrderItemCommand::getProductId)) // 상품 순서 정렬
+          .map(command -> {
+              Product product = productService.verifyAndDecreaseStock(command.getProductId(), command.getQuantity());
+              return OrderItem.of(product, product.getPrice(), command.getQuantity(), 0);
+          }) 
+          .toList();
+      ```
