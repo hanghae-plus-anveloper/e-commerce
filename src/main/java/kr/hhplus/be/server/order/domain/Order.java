@@ -17,7 +17,6 @@ import java.util.List;
 @NoArgsConstructor
 @Table(name = "`order`", indexes = {
         @Index(name = "idx_order_user_status", columnList = "user_id, status"), // 유저별 주문 상태 조회, 사용자 관점 비즈니스 목적
-        @Index(name = "idx_order_ordered_date_product", columnList = "ordered_date, product_id")
         // @Index(name = "idx_order_ordered_at", columnList = "ordered_at"), // 날짜 필터, 3일 이내 TOP 5 조회 목적, 방법 1
 })
 public class Order {
