@@ -48,7 +48,7 @@ public class ProductServiceConcurrencyTest {
     @Test
     @DisplayName("동시에 여러 사용자가 재고를 차감하면 초과 차감되지 않아야 한다")
     void decreaseStock_concurrently_not_exceed() throws InterruptedException {
-        int threadCount = 5; // 요청은 5번
+        int threadCount = 20; // 요청은 20번
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
 
@@ -70,6 +70,6 @@ public class ProductServiceConcurrencyTest {
         System.out.println("최종 재고: " + result.getStock());
         List<Product> all = productRepository.findAll();
         assertThat(result.getStock()).isGreaterThanOrEqualTo(0);
-        assertThat(result.getStock()).isEqualTo(5); // 5개보다 적게 차감되면 안됨
+        assertThat(result.getStock()).isEqualTo(0); // 10개보다 적게 차감되면 안됨
     }
 }
