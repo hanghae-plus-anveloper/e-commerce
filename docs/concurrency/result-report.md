@@ -63,8 +63,8 @@
 
 <details><summary>실패 이미지</summary>
 
-- [실패-1](./assets/001-issue-coupon-fail.png)
-- [실패-2](./assets/002-issue-coupon-fail.png)
+![실패-1](./assets/001-issue-coupon-fail.png)
+![실패-2](./assets/002-issue-coupon-fail.png)
 
 </details>
 
@@ -121,9 +121,9 @@
 
 <details><summary>성공 이미지</summary>
 
-- [성공-1](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/003-issue-coupon-success.png)
-- [성공-2](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/004-issue-coupon-success.png)
-- [성공-3](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/005-issue-coupon-success.png)
+![성공-1](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/003-issue-coupon-success.png)
+![성공-2](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/004-issue-coupon-success.png)
+![성공-3](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/005-issue-coupon-success.png)
 
 </details>
 
