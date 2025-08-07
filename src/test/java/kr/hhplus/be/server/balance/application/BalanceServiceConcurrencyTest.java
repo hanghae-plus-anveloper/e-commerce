@@ -144,4 +144,69 @@ public class BalanceServiceConcurrencyTest {
         assertThat(actual).isIn(2000, 5000, 8000); // 어떤게 실패할지 모름
         assertThat(successCount.get()).isEqualTo(1);
     }
+
+    @Test
+    @DisplayName("충전과 사용이 완전히 동시에 발생할 때 무결성 검증")
+    void chargeAndUse_simultaneously() throws InterruptedException {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(2);
+
+        AtomicInteger successCount = new AtomicInteger(0);
+        ConcurrentMap<String, AtomicInteger> exceptionMap = new ConcurrentHashMap<>();
+
+        Runnable chargeTask = () -> {
+            try {
+                readyLatch.countDown();
+                startLatch.await();
+                balanceService.chargeBalance(user, 3000);
+                successCount.incrementAndGet();
+            } catch (Exception e) {
+                exceptionMap
+                        .computeIfAbsent(e.getClass().getSimpleName(), key -> new AtomicInteger(0))
+                        .incrementAndGet();
+            } finally {
+                doneLatch.countDown();
+            }
+        };
+
+        Runnable useTask = () -> {
+            try {
+                readyLatch.countDown();
+                startLatch.await();
+                balanceService.useBalance(user, 3000);
+                successCount.incrementAndGet();
+            } catch (Exception e) {
+                exceptionMap
+                        .computeIfAbsent(e.getClass().getSimpleName(), key -> new AtomicInteger(0))
+                        .incrementAndGet();
+            } finally {
+                doneLatch.countDown();
+            }
+        };
+
+        executor.submit(chargeTask);
+        executor.submit(useTask);
+
+        readyLatch.await();
+        startLatch.countDown();
+        doneLatch.await();
+        executor.shutdown();
+
+        Balance result = balanceRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new IllegalStateException("잔액 정보 없음"));
+        int actual = result.getBalance();
+
+        System.out.println("최종 잔액: " + actual);
+        System.out.println("성공 요청 수: " + successCount.get());
+        System.out.println("실패 예외 현황:");
+        for (Map.Entry<String, AtomicInteger> entry : exceptionMap.entrySet()) {
+            System.out.println(" - " + entry.getKey() + ": " + entry.getValue().get());
+        }
+
+        assertThat(actual).isIn(2000, 5000, 8000);
+        assertThat(successCount.get()).isBetween(1, 2);
+    }
 }

@@ -371,3 +371,145 @@
   - DB를 직접 수정하여 `JPA`의 영속성 컨텍스트 내에서 이미 선언된 엔티티의 used가 갱신되진 않지만, 
   - 해당 시점에서 쿠폰 사용과 관련된 사항은 추가로 발생하지 않기 때문에 컨텍스트와 DB의 일치 여부는 큰 영향이 없다고 판단함
 
+
+## 4. 잔액 차감 - 주문 중복 요청 & 5. 잔액 충전 및 사용 - 주문과 충전의 충돌, 충전 동시 요청 (테스트 실패)
+
+- 사용자 한명에 대하여 잔액의 차감이 중복으로 발생하거나, 충전과 사용이 동시에 진행되지 않도록 보장
+- [BalanceServiceConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/balance/application/BalanceServiceConcurrencyTest.java)
+
+<details><summary>주요 테스트 코드(동시성 문제 확인 실패)</summary>
+
+```java
+
+    @Test
+    @DisplayName("동시에 두 번의 주문 요청이 들어올 경우 잔액이 음수가 되지 않아야 한다")
+    void useBalance_concurrently() throws InterruptedException {
+        int threadCount = 2;
+        int amountToUse = 3000;
+
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        AtomicInteger successCount = new AtomicInteger(0);
+        ConcurrentMap<String, AtomicInteger> exceptionMap = new ConcurrentHashMap<>();
+
+        for (int i = 0; i < threadCount; i++) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    balanceService.useBalance(user, amountToUse);
+                    successCount.incrementAndGet();
+                } catch (Exception e) {
+                    exceptionMap
+                            .computeIfAbsent(e.getClass().getSimpleName(), key -> new AtomicInteger(0))
+                            .incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            }, executor);
+        }
+
+        latch.await();
+        executor.shutdown();
+
+        Balance result = balanceRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new IllegalStateException("잔액 정보 없음"));
+
+        System.out.println("최종 잔액: " + result.getBalance());
+        System.out.println("성공 요청 수: " + successCount.get());
+        System.out.println("실패 예외 현황:");
+        for (Map.Entry<String, AtomicInteger> entry : exceptionMap.entrySet()) {
+            System.out.println(" - " + entry.getKey() + ": " + entry.getValue().get());
+        }
+
+        assertThat(successCount.get()).isEqualTo(1);
+        assertThat(result.getBalance()).isEqualTo(2000);
+    }
+
+```
+
+</details>
+
+### 동시성 문제 확인 - 확인 불가 
+
+<details><summary>동시성 문제 확인 불가 이미지</summary>
+
+![확인불가](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/023-balance-test-fail.png)
+
+</details>
+
+- 확인 불가 예측 
+  - 락을 추가하지 않았음에도 테스트 자체가 실패하지 않음
+  - `CannotAcquireLockException`이 발생하면서 접근했던 두 요청 중 하나가 무조건 실패하여 락없이도 하나만 반영이 됨
+  - 다만 충전과 사용도 같은 예외가 발생하는데, 항상 코드 순서상 먼저 호출된 충전이 성공하고 사용이 실패함
+  - `readyLatch` 를 통해 완전히 동시에 실행하는 함수로 구현하면서 통과값을 2000, 8000으로 수정함
+  - 완전 동시 실행이라고 하는데, 10번 중 10번이 먼저 선언된 함수가 성공함
+
+### 동시성 제어 구현
+
+- `@Version` 낙관적 락 적용, 요청 중 하나만 성공해도 로직상 문제 없음
+- [Balance.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/balance/domain/Balance.java)
+- [BalanceService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/balance/application/BalanceService.java)
+
+<details><summary>주요 구현 코드</summary>
+
+```java
+
+// Balance.java
+@Getter
+@Entity
+@Table(name = "balance")
+public class Balance {
+
+    @Version
+    private Long version;
+
+}
+
+// BalanceService.java
+@Service
+@RequiredArgsConstructor
+public class BalanceService {
+
+    private final BalanceRepository balanceRepository;
+    private final BalanceHistoryRepository balanceHistoryRepository;
+
+    @Transactional
+    public void chargeBalance(User user, int amount) {
+        Balance balance = balanceRepository.findByUserId(user.getId())
+                .orElseGet(() -> {
+                    Balance newBalance = new Balance(user, 0);
+                    user.setBalance(newBalance);
+                    return balanceRepository.save(newBalance);
+                });
+        
+        /* ...  */
+    }
+
+    @Transactional
+    public void useBalance(User user, int amount) {  
+        Balance balance = balanceRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("잔액 정보 없음"));
+        
+        /* ...  */
+    }       
+}
+```
+
+</details>
+
+<details><summary>테스트 통과 유지 이미지</summary>
+
+![유지-1](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/024-double-use-balance.png)
+![유지-2](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/025-charge-balance.png)
+
+</details>
+
+- 적용 결과
+  - 락 없이도 이미 트랙젝션 선에서 처리가 되고 있는 상태
+  - 추가로 작성할 주문 생성 중 잔액 차감이 포함되어 부분적 서비스 차원의 낙관적 락을 추가함
+  - 테스트는 변동 없이 1건 통과, 1건 `CannotAcquireLockException` 실패
+  - 사용과 충전의 충돌 테스트는 예측값을 범위로 지정했음에도 동일한 최종 금액을 반환함 
+  - 코드 순서에 따라 앞에 함수가 항상 먼저 트랜젝션이 생성되는 것으로 보임 10회 시도 중 10회 동일
+
+
+
