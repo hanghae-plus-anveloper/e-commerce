@@ -30,6 +30,9 @@ public class Balance {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Version
+    private Long version;
+
     @OneToMany(mappedBy = "balance", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<BalanceHistory> histories = new ArrayList<>();

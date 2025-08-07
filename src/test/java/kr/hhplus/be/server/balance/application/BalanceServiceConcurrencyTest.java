@@ -78,7 +78,9 @@ public class BalanceServiceConcurrencyTest {
         latch.await();
         executor.shutdown();
 
-        Balance result = user.getBalance();
+        Balance result = balanceRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new IllegalStateException("잔액 정보 없음"));
+
         System.out.println("최종 잔액: " + result.getBalance());
         System.out.println("성공 요청 수: " + successCount.get());
         System.out.println("실패 예외 현황:");
@@ -128,7 +130,8 @@ public class BalanceServiceConcurrencyTest {
         latch.await();
         executor.shutdown();
 
-        Balance result = user.getBalance();
+        Balance result = balanceRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new IllegalStateException("잔액 정보 없음"));
         int actual = result.getBalance();
 
         System.out.println("최종 잔액: " + actual);
@@ -138,6 +141,7 @@ public class BalanceServiceConcurrencyTest {
             System.out.println(" - " + entry.getKey() + ": " + entry.getValue().get());
         }
 
-        assertThat(actual).isEqualTo(5000);
+        assertThat(actual).isIn(2000, 5000, 8000); // 어떤게 실패할지 모름
+        assertThat(successCount.get()).isEqualTo(1);
     }
 }
