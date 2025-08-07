@@ -14,7 +14,7 @@ spring:
   jpa:
     open-in-view: false
     generate-ddl: true # hibernate에 스키마 생성 위임
-    show-sql: true
+    show-sql: false
     hibernate:
       ddl-auto: create-drop # 프로젝트 실행 시 테이블 생성 및 종료 시 삭제
     properties:

@@ -4,6 +4,7 @@ import kr.hhplus.be.server.coupon.domain.Coupon;
 import kr.hhplus.be.server.coupon.domain.CouponPolicy;
 import kr.hhplus.be.server.coupon.domain.CouponPolicyRepository;
 import kr.hhplus.be.server.coupon.domain.CouponRepository;
+import kr.hhplus.be.server.coupon.exception.CouponSoldOutException;
 import kr.hhplus.be.server.user.domain.User;
 import kr.hhplus.be.server.coupon.exception.InvalidCouponException;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,12 @@ public class CouponService {
             throw new InvalidCouponException("쿠폰 정책이 유효하지 않습니다.");
         }
 
-        policy.decreaseRemainingCount();
+//        policy.decreaseRemainingCount(); // 도메인에서 감소
+
+        int updated = couponPolicyRepository.decreaseRemainingCount(policyId);
+        if (updated == 0) {
+            throw new CouponSoldOutException("남은 쿠폰 수량이 없습니다.");
+        }
 
         Coupon coupon = Coupon.builder()
                 .policy(policy)
