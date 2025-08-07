@@ -67,8 +67,13 @@ public class CouponService {
     @Transactional
     public Coupon useCoupon(Long couponId, Long userId) {
         Coupon coupon = findValidCouponOrThrow(couponId, userId);
-        coupon.use();
+        // coupon.use();
 
-        return coupon;
+        int updated = couponRepository.markCouponAsUsed(couponId, userId); // 조건부 update
+        if (updated == 0) {
+            throw new InvalidCouponException("이미 사용된 쿠폰이거나 유효하지 않습니다.");
+        }
+        return couponRepository.findByIdAndUserId(couponId, userId)
+                .orElseThrow(() -> new InvalidCouponException("쿠폰 조회 실패"));
     }
 }
