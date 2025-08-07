@@ -1,6 +1,6 @@
-## 테스트를 통한 동시성 해결 결과
+# 테스트를 통한 동시성 해결 결과
 
-### 1. 상품 재고 차감
+## 1. 상품 재고 차감
 
 - 상품의 재고 10개에 대하여 20개의 요청, 5개의 요청에서 요청만큼 재고가 차감, 초과 차감은 되지 않도록 보장
 - [ProductServiceConcurrencyTest](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/product/application/ProductServiceConcurrencyTest.java)
@@ -52,7 +52,7 @@
 
 </details>
 
-- 동시성 문제 확인: 동일한 상품에 대한 엔티티 조회 → 경쟁 조건에 의한 실패
+### 동시성 문제 확인: 동일한 상품에 대한 엔티티 조회 → 경쟁 조건에 의한 실패
 
 <details><summary>실패 이미지</summary>
 
@@ -70,11 +70,10 @@
   - 도메인 함수 자체에서 재고 0개에 대한 예외처리를 하고 있어, 음수 재고는 나타나지 않음
   - `@Transactional` 내에서 동일한 상품에 대한 재고 차감을 동시에 시도하여 충돌로 인한 실패만 확인됨
 
-- 동시성 제어 구현
+### 동시성 제어 구현
   - `@Lock(LockModeType.PESSIMISTIC_WRITE)` 비관적 락 적용, Service 코드 수정
   - [ProductRepository.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/domain/ProductRepository.java)
   - [ProductService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/application/ProductService.java)
-
 
 <details><summary>주요 코드</summary>
 
@@ -112,7 +111,7 @@
   - 현재는 상품 1에 대한 동시성을 확인하였지만, 상품 목록을 기준으로 여러 상품을 차감하는 경우에 데드락까지 고려되어야 함
   - 인덱스를 사용하지 않으면 테이블 전체에 락이 걸릴 수 있음을 유의해야함
 
-### 2. 쿠폰 선착순 발급
+## 2. 쿠폰 선착순 발급
 
 - 발급 수량이 `3개`인 쿠폰 정책(`CouponPolicy`)에 대하여 `10`개의 스레드로 동시요청 하는 경우, 쿠폰이 초과 발급 되지 않도록 보장
 - 경쟁 조건이 발생하는 지와 트랜젝션에 의한 데드락을 확인하고, `@Version`이나 `@Modifying` 쿼리로 제거가 가능 한지 검증
@@ -170,7 +169,7 @@
 
 </details>
 
-- 동시성 확인: 경쟁 조건 + 데드락
+### 동시성 문제 확인: 경쟁 조건 + 데드락
 
 <details><summary>실패 이미지</summary>
 
@@ -189,7 +188,7 @@
   - `CouponService`의 `@Transactional issueCoupon` 내에서 `policy.decreaseRemainingCount` 도메인 함수로 인해 동일한 `row`에 다수의 트랜젝션이 `update`를 시도
     - → 이에 따라 `InnoDB 락`으로 인해 데드락 발생
 
-- 동시성 제어 구현
+### 동시성 제어 구현
   - `@Version`을 주석 해제하는 것만으로도 테스트가 통과되는 것을 확인함
   - 추가적인 학습을 위해 `@Modifying` 쿼리를 통한 제어를 구현하여 테스트
   - [CouponPolicyRepository.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/domain/CouponPolicyRepository.java)

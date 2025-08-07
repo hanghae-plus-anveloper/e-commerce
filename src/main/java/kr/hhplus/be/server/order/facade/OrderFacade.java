@@ -45,12 +45,11 @@ public class OrderFacade {
 
 
         if (couponId != null) {
-            Coupon coupon = couponService.findValidCouponOrThrow(couponId, user.getId());
+            Coupon coupon = couponService.useCoupon(couponId, user.getId());
             int discount = coupon.getDiscountRate() > 0
                     ? (int) (total * coupon.getDiscountRate())
                     : coupon.getDiscountAmount();
             total = Math.max(0, total - discount);
-            coupon.use();
         }
 
         balanceService.useBalance(user, total);

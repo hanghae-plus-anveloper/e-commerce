@@ -63,4 +63,12 @@ public class CouponService {
 
         return coupon;
     }
+
+    @Transactional
+    public Coupon useCoupon(Long couponId, Long userId) {
+        Coupon coupon = findValidCouponOrThrow(couponId, userId);
+        coupon.use();
+
+        return coupon;
+    }
 }
