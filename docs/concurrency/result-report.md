@@ -5,7 +5,7 @@
 - 상품의 재고 10개에 대하여 20개의 요청, 5개의 요청에서 요청만큼 재고가 차감, 초과 차감은 되지 않도록 보장
 - [ProductServiceConcurrencyTest](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/product/application/ProductServiceConcurrencyTest.java)
 
-<details><summary>주요 코드</summary>
+<details><summary>주요 테스트 코드</summary>
 
 ```java
 
@@ -75,7 +75,7 @@
   - [ProductRepository.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/domain/ProductRepository.java)
   - [ProductService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/application/ProductService.java)
 
-<details><summary>주요 코드</summary>
+<details><summary>주요 구현 코드</summary>
 
 ```java
     // ProductRepository.java
@@ -118,7 +118,7 @@
   - 이전 주차에 이미 `@Version`을 적용하여 해당 부분은 주석처리하고 테스트 코드 작성
 - [CouponFacadeConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/coupon/facade/CouponFacadeConcurrencyTest.java)
 
-<details><summary>주요 코드</summary>
+<details><summary>주요 테스트 코드</summary>
 
     ```java
         @BeforeEach
@@ -194,7 +194,7 @@
   - [CouponPolicyRepository.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/domain/CouponPolicyRepository.java)
   - [CouponService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponService.java)
 
-<details><summary>주요 코드</summary>
+<details><summary>주요 구현 코드</summary>
 
     ```
         // CouponPolicyRepository.java
@@ -249,3 +249,125 @@
 
 - 사용해본 결과 
   - `@Modifying`이 성능적으로는 우세하다고 하지만, `@Version` 으로 낙관적 락을 적용하는 것이 객체 지향적이며, JPA의 변경 감지를 활용하여 트렌젝션 내에서의 일관된 상태를 유지하기 용이한 것으로 판단됨
+
+
+## 3. 쿠폰 사용
+
+- 사용자 한명에게 발급된 쿠폰 하나에 대한 10개의 동시 요청 중 1개만 성공하도록 보장
+- `used = true` 값이 무조건 반환되어 단순 결과값만으로는 확인 불가
+- 10회 요청 중 성공과 예외처리를 카운트 하여 경쟁 상태를 확인
+- [CouponServiceConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/coupon/application/CouponServiceConcurrencyTest.java)
+
+<details><summary>주요 테스트 코드</summary>
+
+```java
+
+    @Test
+    @DisplayName("동시에 동일한 쿠폰을 사용하려고 할 때 중복 사용이 발생하지 않아야 한다")
+    void useCoupon_concurrently_only_once_used() throws InterruptedException {
+        int threadCount = 10;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        AtomicInteger successCount = new AtomicInteger(0);
+        ConcurrentMap<String, AtomicInteger> exceptionMap = new ConcurrentHashMap<>();
+
+        for (int i = 0; i < threadCount; i++) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    couponService.useCoupon(issuedCoupon.getId(), user.getId());
+                    successCount.incrementAndGet();
+                } catch (Exception e) {
+                    exceptionMap
+                            .computeIfAbsent(e.getClass().getSimpleName(), key -> new AtomicInteger(0))
+                            .incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            }, executor);
+        }
+
+        latch.await();
+        executor.shutdown();
+
+        Coupon result = couponRepository.findById(issuedCoupon.getId()).orElseThrow();
+
+
+        System.out.println("최종 used 상태: " + result.isUsed());
+        System.out.println("성공한 사용 요청 수: " + successCount.get());
+        System.out.println("실패한 예외 현황:");
+        for (Map.Entry<String, AtomicInteger> entry : exceptionMap.entrySet()) {
+            System.out.println(" - " + entry.getKey() + ": " + entry.getValue().get());
+        }
+
+        assertThat(result.isUsed()).isTrue();
+        assertThat(successCount.get()).isEqualTo(1);
+    }
+
+```
+
+</details>
+
+### 동시성 문제 확인: 하나의 쿠폰 사용 요청에 대한 다수 성공 확인
+
+<details><summary>실패 이미지</summary>
+
+![실패-1](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/021-use-coupon-fail.png)
+
+</details>
+
+- 실패 결과 요약
+  - 테스트: 1개의 쿠폰에 대한 10개의 사용요청 중 3개 성공
+- 원인 정리
+  - `coupon.isAvailable()` 도메인 함수를 통해 `!used && policy.isWithinPeriod()` 체크를 하고 있지만, 
+  - 요청 시 used 가 아직 false 인 값을 모두 조회하여 이후 true로 수정하는 update 수행
+
+### 동시성 제어 구현
+
+- @Modifying 쿼리를 통한 낙관적 동시성 제어 구현
+- [CouponRepository.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/domain/CouponRepository.java)
+- [CouponService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponService.java)
+
+<details><summary>주요 구현 코드</summary>
+
+```java
+    // CouponRepository.java
+    @Modifying(clearAutomatically = true)
+    @Query("""
+                UPDATE Coupon c
+                   SET c.used = true
+                 WHERE c.id = :couponId
+                   AND c.user.id = :userId
+                   AND c.used = false
+            """)
+    int markCouponAsUsed(@Param("couponId") Long couponId, @Param("userId") Long userId);    
+
+    // CouponService.java
+    @Transactional
+    public Coupon useCoupon(Long couponId, Long userId) {
+        Coupon coupon = findValidCouponOrThrow(couponId, userId);
+        // coupon.use();
+
+        int updated = couponRepository.markCouponAsUsed(couponId, userId); // 조건부 update
+        if (updated == 0) {
+            throw new InvalidCouponException("이미 사용된 쿠폰이거나 유효하지 않습니다.");
+        }
+        return couponRepository.findByIdAndUserId(couponId, userId)
+                .orElseThrow(() -> new InvalidCouponException("쿠폰 조회 실패"));
+    }
+```
+
+</details>
+
+<details><summary>성공 이미지</summary>
+
+![성공](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/022-use-coupon-success.png)
+
+</details>
+
+- 성공 결과 요약
+  - `@Modifying` 쿼리를 통한 낙관적 동시성 제어로 10건의 요청중 1건만 성공 후 9건은 실패 반환
+  - `used = false` 조건을 만족하는 쿠폰만 true로 갱신하기 때문에, 중복 사용을 방지함
+  - DB를 직접 수정하여 `JPA`의 영속성 컨텍스트 내에서 이미 선언된 엔티티의 used가 갱신되진 않지만, 
+  - 해당 시점에서 쿠폰 사용과 관련된 사항은 추가로 발생하지 않기 때문에 컨텍스트와 DB의 일치 여부는 큰 영향이 없다고 판단함
+
