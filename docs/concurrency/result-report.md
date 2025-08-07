@@ -75,7 +75,8 @@
   - [ProductRepository.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/domain/ProductRepository.java)
   - [ProductService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/application/ProductService.java)
 
-<details><summay>주요 코드</summay>
+
+<details><summary>주요 코드</summary>
 
 ```java
     // ProductRepository.java
