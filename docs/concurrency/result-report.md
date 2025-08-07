@@ -1,12 +1,122 @@
 ## 테스트를 통한 동시성 해결 결과
 
+### 1. 상품 재고 차감
+
+- 상품의 재고 10개에 대하여 20개의 요청, 5개의 요청에서 요청만큼 재고가 차감, 초과 차감은 되지 않도록 보장
+- [ProductServiceConcurrencyTest](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/product/application/ProductServiceConcurrencyTest.java)
+
+<details><summary>주요 코드</summary>
+
+```java
+
+    @BeforeEach
+    void setUp() {
+        productRepository.deleteAll();
+
+        product = productRepository.save(Product.builder()
+                .name("상품-A")
+                .price(10000)
+                .stock(10)  // 초기 재고 10개
+                .build());
+    }
+
+    @Test
+    @DisplayName("동시에 여러 사용자가 재고를 차감하면 초과 차감되지 않아야 한다")
+    void decreaseStock_concurrently_not_exceed() throws InterruptedException {
+        int threadCount = 20; // 요청은 20번
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        List<CompletableFuture<Void>> futures = IntStream.rangeClosed(1, threadCount).mapToObj(i -> CompletableFuture.runAsync(() -> {
+            try {
+                productService.verifyAndDecreaseStock(product.getId(), 1);
+            } catch (Exception e) {
+            // 예외 발생 무시: 재고 부족
+            } finally {
+                latch.countDown();
+            }
+        }, executor)).toList();
+
+        latch.await();
+
+        Product result = productRepository.findById(product.getId())
+                  .orElseThrow();
+
+        System.out.println("최종 재고: " + result.getStock());
+        List<Product> all = productRepository.findAll();
+        assertThat(result.getStock()).isGreaterThanOrEqualTo(0);
+        assertThat(result.getStock()).isEqualTo(0); // 10개보다 적게 차감되면 안됨
+    }
+    
+```
+
+</details>
+
+- 동시성 문제 확인: 동일한 상품에 대한 엔티티 조회 → 경쟁 조건에 의한 실패
+
+<details><summary>실패 이미지</summary>
+
+![실패-1](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/011-decrease-stock-fail.png)
+![실패-2](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/012-decrease-stock-fail.png)
+![실패-3](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/013-decrease-stock-fail.png)
+
+</details>
+
+- 실패 결과 요약
+  - 테스트 1~2: 20개의 요청, 최종 재고 3 → 차감이 누락, 중복 처리됨
+  - 테스트 3: 5개의 요청, 최종 재고 8 → 차감이 누락, 중복 처리됨
+
+- 원인 정리
+  - 도메인 함수 자체에서 재고 0개에 대한 예외처리를 하고 있어, 음수 재고는 나타나지 않음
+  - `@Transactional` 내에서 동일한 상품에 대한 재고 차감을 동시에 시도하여 충돌로 인한 실패만 확인됨
+
+- 동시성 제어 구현
+  - `@Lock(LockModeType.PESSIMISTIC_WRITE)` 비관적 락 적용, Service 코드 수정
+  - [ProductRepository.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/domain/ProductRepository.java)
+  - [ProductService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/application/ProductService.java)
+
+<details><summay>주요 코드</summay>
+
+```java
+    // ProductRepository.java
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Product p WHERE p.id = :id")
+    Optional<Product> findByIdForUpdate(@Param("id") Long id);
+
+    // ProductService.java
+    @Transactional
+    public Product verifyAndDecreaseStock(Long productId, int requiredQuantity) {
+        Product product = productRepository.findByIdForUpdate(productId)
+                .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
+        /* ... */
+    }
+```
+
+</details>
+
+<details><summary>성공 이미지</summary>
+
+![성공-1](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/014-decrease-stock-success.png)
+![성공-2](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/015-decrease-stock-success.png)
+![성공-3](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docs/concurrency/assets/016-decrease-stock-success.png)
+
+</details>
+
+- 성공 결과 요약
+  - 테스트 1~2(요청 5): 최종 재고 5, 기대값 통과  
+  - 테스트 3(요청 20): 최종 재고 0, 기대값 통과
+  
+- 결론
+  - 비관적 락으로 정확한 예측 값을 확인하여 동시성 문제는 완전히 해결됨
+  - 현재는 상품 1에 대한 동시성을 확인하였지만, 상품 목록을 기준으로 여러 상품을 차감하는 경우에 데드락까지 고려되어야 함
+  - 인덱스를 사용하지 않으면 테이블 전체에 락이 걸릴 수 있음을 유의해야함
+
 ### 2. 쿠폰 선착순 발급
 
 - 발급 수량이 `3개`인 쿠폰 정책(`CouponPolicy`)에 대하여 `10`개의 스레드로 동시요청 하는 경우, 쿠폰이 초과 발급 되지 않도록 보장
-- 경쟁 조건이 발생하는 지와 트랜젝션에 의한 데들락을 확인하고, `@Version`이나 `@Modifying` 쿼리로 제거가 가능 한지 검증
+- 경쟁 조건이 발생하는 지와 트랜젝션에 의한 데드락을 확인하고, `@Version`이나 `@Modifying` 쿼리로 제거가 가능 한지 검증
   - 이전 주차에 이미 `@Version`을 적용하여 해당 부분은 주석처리하고 테스트 코드 작성
-- [CouponFacadeConcurrencyTest.java
-](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/coupon/facade/CouponFacadeConcurrencyTest.java)
+- [CouponFacadeConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/coupon/facade/CouponFacadeConcurrencyTest.java)
 
 <details><summary>주요 코드</summary>
 
