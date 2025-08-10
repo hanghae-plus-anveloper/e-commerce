@@ -3,6 +3,7 @@ spring:
     name: hhplus
   profiles:
     active: local
+
   datasource:
     name: HangHaePlusDataSource
     type: com.zaxxer.hikari.HikariDataSource
@@ -11,6 +12,7 @@ spring:
       connection-timeout: 10000
       max-lifetime: 60000
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     open-in-view: false
     generate-ddl: true # hibernate에 스키마 생성 위임
@@ -20,6 +22,22 @@ spring:
     properties:
       hibernate.timezone.default_storage: NORMALIZE_UTC
       hibernate.jdbc.time_zone: UTC
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600000 # 기본 TTL 10분(ms)
+      cache-null-values: false
+      use-key-prefix: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  redis:
+    redisson:
+      file: classpath:redisson-single.yml
 
 ---
 spring.config.activate.on-profile: local, test
