@@ -17,11 +17,12 @@ public class BalanceService {
     @Transactional
     public void chargeBalance(User user, int amount) {
 
-        Balance balance = user.getBalance();
-        if (balance == null) {
-            balance = new Balance(user, 0);
-            user.setBalance(balance); // 연관관계 설정
-        }
+        Balance balance = balanceRepository.findByUserId(user.getId())
+                .orElseGet(() -> {
+                    Balance newBalance = new Balance(user, 0);
+                    user.setBalance(newBalance);
+                    return balanceRepository.save(newBalance);
+                });
 
         balance.charge(amount);
         balanceRepository.save(balance);
@@ -38,7 +39,9 @@ public class BalanceService {
     @Transactional
     public void useBalance(User user, int amount) {
 
-        Balance balance = user.getBalance();
+        Balance balance = balanceRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("잔액 정보 없음"));
+
         if (balance == null || balance.getBalance() < amount) {
             throw new InsufficientBalanceException("잔액이 부족합니다.");
         }

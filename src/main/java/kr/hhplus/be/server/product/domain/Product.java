@@ -30,10 +30,6 @@ public class Product {
     @OneToMany(mappedBy = "product")
     private List<OrderItem> orderItems = new ArrayList<>();
 
-    @Version
-    private int version; // 낙관적 락 추가
-
-
     @Builder
     public Product(String name, int price, int stock) {
         this.name = name;

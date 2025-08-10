@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
 
@@ -13,9 +14,10 @@ import java.util.Date;
 @Getter
 @NoArgsConstructor
 @Table(name = "order_item", indexes = {
-        @Index(name = "idx_order_item_ordered_product", columnList = "ordered_at, product_id"), // 통계용 복합, 반정규화 한 ordered_at 으로 3일 이내 TOP 5 목적 방법2
-        @Index(name = "idx_order_item_product_ordered", columnList = "product_id, ordered_at"), // 상품 → 날짜 순서 차이 테스트용 목적
-        @Index(name = "idx_order_item_ordered_at", columnList = "ordered_at"), // 날짜 필터
+        @Index(name = "idx_order_item_ordered_date_product", columnList = "ordered_date, product_id")
+        // @Index(name = "idx_order_item_ordered_product", columnList = "ordered_at, product_id"), // X, 통계용 복합, 반정규화 한 ordered_at 으로 3일 이내 TOP 5 목적 방법2
+        // @Index(name = "idx_order_item_product_ordered", columnList = "product_id, ordered_at"), // X, 상품 → 날짜 순서 차이 테스트용 목적
+        // @Index(name = "idx_order_item_ordered_at", columnList = "ordered_at"), // X, 날짜 필터
 })
 public class OrderItem {
 
@@ -29,6 +31,10 @@ public class OrderItem {
 
     @Setter
     private LocalDateTime orderedAt; // 역정규화: OrderItem이 아닌 Order의 생성시점이며, Order 생성자에서 Setter로 직접 주입
+
+    @Setter
+    @Column(name = "ordered_date")
+    private LocalDate orderedDate;
 
     @Setter
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -26,10 +26,13 @@ public class ProductService {
 
     @Transactional
     public Product verifyAndDecreaseStock(Long productId, int requiredQuantity) {
-        Product product = findById(productId);
+        Product product = productRepository.findByIdForUpdate(productId)
+                .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
+
         if (product.getStock() < requiredQuantity) {
             throw new IllegalStateException("상품 재고가 부족합니다.");
         }
+
         product.decreaseStock(requiredQuantity);
         return product;
     }
