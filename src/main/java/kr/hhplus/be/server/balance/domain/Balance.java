@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import kr.hhplus.be.server.user.domain.User;
 import lombok.Builder;
 import lombok.Getter;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;

@@ -1,12 +1,11 @@
 package kr.hhplus.be.server.product.application;
 
-import jakarta.transaction.Transactional;
-import kr.hhplus.be.server.product.controller.ProductResponseDto;
 import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.product.domain.ProductRepository;
 import kr.hhplus.be.server.product.exception.ProductNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 

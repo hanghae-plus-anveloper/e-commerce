@@ -1,13 +1,12 @@
 package kr.hhplus.be.server.balance.facade;
 
 import kr.hhplus.be.server.balance.application.BalanceService;
-import kr.hhplus.be.server.user.application.UserService;
 import kr.hhplus.be.server.balance.domain.Balance;
+import kr.hhplus.be.server.user.application.UserService;
 import kr.hhplus.be.server.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
 
 @Component
 @RequiredArgsConstructor

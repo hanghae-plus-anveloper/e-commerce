@@ -1,18 +1,18 @@
 package kr.hhplus.be.server.order.facade;
 
-import jakarta.transaction.Transactional;
 import kr.hhplus.be.server.balance.application.BalanceService;
 import kr.hhplus.be.server.coupon.application.CouponService;
+import kr.hhplus.be.server.coupon.domain.Coupon;
 import kr.hhplus.be.server.order.application.OrderService;
+import kr.hhplus.be.server.order.domain.Order;
+import kr.hhplus.be.server.order.domain.OrderItem;
 import kr.hhplus.be.server.product.application.ProductService;
 import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.user.application.UserService;
-import kr.hhplus.be.server.coupon.domain.Coupon;
-import kr.hhplus.be.server.order.domain.Order;
-import kr.hhplus.be.server.order.domain.OrderItem;
 import kr.hhplus.be.server.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;

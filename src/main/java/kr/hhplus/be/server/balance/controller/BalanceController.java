@@ -2,10 +2,9 @@ package kr.hhplus.be.server.balance.controller;
 
 import kr.hhplus.be.server.balance.domain.Balance;
 import kr.hhplus.be.server.balance.facade.BalanceFacade;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
-
-import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor

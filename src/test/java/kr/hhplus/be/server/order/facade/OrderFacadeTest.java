@@ -5,7 +5,6 @@ import kr.hhplus.be.server.coupon.application.CouponService;
 import kr.hhplus.be.server.coupon.domain.Coupon;
 import kr.hhplus.be.server.order.application.OrderService;
 import kr.hhplus.be.server.order.domain.Order;
-import kr.hhplus.be.server.order.domain.OrderItem;
 import kr.hhplus.be.server.product.application.ProductService;
 import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.user.application.UserService;
@@ -17,8 +16,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
-import static org.assertj.core.api.Assertions.*;
 
 class OrderFacadeTest {
 

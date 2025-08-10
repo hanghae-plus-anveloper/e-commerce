@@ -1,7 +1,9 @@
 package kr.hhplus.be.server.common.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Getter;
 
+@Getter
 @Schema(description = "에러 응답 객체")
 public class CustomErrorResponse {
 
@@ -16,11 +18,4 @@ public class CustomErrorResponse {
         this.status = status;
     }
 
-    public String getMessage() {
-        return message;
-    }
-
-    public int getStatus() {
-        return status;
-    }
 }

@@ -2,8 +2,8 @@ package kr.hhplus.be.server.coupon.facade;
 
 
 import kr.hhplus.be.server.coupon.application.CouponService;
-import kr.hhplus.be.server.user.application.UserService;
 import kr.hhplus.be.server.coupon.domain.Coupon;
+import kr.hhplus.be.server.user.application.UserService;
 import kr.hhplus.be.server.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
