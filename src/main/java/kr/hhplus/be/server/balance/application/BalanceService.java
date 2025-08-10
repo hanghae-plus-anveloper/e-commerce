@@ -1,8 +1,8 @@
 package kr.hhplus.be.server.balance.application;
 
 import kr.hhplus.be.server.balance.domain.*;
-import kr.hhplus.be.server.user.domain.User;
 import kr.hhplus.be.server.balance.exception.InsufficientBalanceException;
+import kr.hhplus.be.server.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

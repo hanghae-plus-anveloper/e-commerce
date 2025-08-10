@@ -1,11 +1,10 @@
 package kr.hhplus.be.server.balance.domain;
 
-import java.time.LocalDateTime;
-
 import com.fasterxml.jackson.annotation.JsonBackReference;
-
 import jakarta.persistence.*;
 import lombok.Getter;
+
+import java.time.LocalDateTime;
 
 @Getter
 @Entity
