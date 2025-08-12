@@ -84,7 +84,7 @@ class OrderFacadeTest {
 
         when(userService.findById(userId)).thenReturn(user);
         when(productService.verifyAndDecreaseStock(productId, quantity)).thenReturn(product);
-        when(couponService.findValidCouponOrThrow(couponId, userId)).thenReturn(coupon);
+        when(couponService.useCoupon(couponId, userId)).thenReturn(coupon);
         when(coupon.getDiscountRate()).thenReturn(0.2); // 20% 할인
         when(coupon.getDiscountAmount()).thenReturn(0);
         when(orderService.createOrder(eq(user), anyList(), eq(800))).thenReturn(mockOrder);
@@ -92,7 +92,6 @@ class OrderFacadeTest {
         Order result = orderFacade.placeOrder(userId, List.of(command), couponId);
 
         assertThat(result).isNotNull();
-        verify(coupon).use();
         verify(balanceService).useBalance(user, 800);
         verify(orderService).createOrder(eq(user), anyList(), eq(800));
     }
