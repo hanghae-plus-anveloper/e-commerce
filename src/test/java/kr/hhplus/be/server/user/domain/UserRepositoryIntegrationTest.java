@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.user.domain;
 
+import kr.hhplus.be.server.IntegrationTestContainersConfig;
 import kr.hhplus.be.server.balance.domain.Balance;
 import kr.hhplus.be.server.balance.domain.BalanceRepository;
 import kr.hhplus.be.server.coupon.domain.Coupon;
@@ -16,7 +17,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.TestcontainersConfiguration;
 
 import java.util.List;
 
@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
-@Import(TestcontainersConfiguration.class) // 생략해도 동작
+@Import(IntegrationTestContainersConfig.class)
 class UserRepositoryIntegrationTest {
 
     @Autowired

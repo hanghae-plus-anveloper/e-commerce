@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.order.domain;
 
+import kr.hhplus.be.server.IntegrationTestContainersConfig;
 import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.product.domain.ProductRepository;
 import kr.hhplus.be.server.user.domain.User;
@@ -13,7 +14,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.TestcontainersConfiguration;
 
 import java.util.List;
 
@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
-@Import(TestcontainersConfiguration.class) // 생략 가능
+@Import(IntegrationTestContainersConfig.class)
 class OrderRepositoryIntegrationTest {
 
     @Autowired private OrderRepository orderRepository;

@@ -2,6 +2,7 @@ package kr.hhplus.be.server.balance.controller;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import kr.hhplus.be.server.IntegrationTestContainersConfig;
 import kr.hhplus.be.server.balance.domain.Balance;
 import kr.hhplus.be.server.balance.domain.BalanceRepository;
 import kr.hhplus.be.server.user.domain.User;
@@ -15,14 +16,13 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
-import org.testcontainers.utility.TestcontainersConfiguration;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Import(TestcontainersConfiguration.class)
+@Import(IntegrationTestContainersConfig.class)
 class BalanceControllerTest {
 
     @LocalServerPort

@@ -12,7 +12,7 @@ services:
       MYSQL_PASSWORD: application
       MYSQL_DATABASE: hhplus
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ./data/mysql:/var/lib/mysql
     networks:
       - hhplus-network
     restart: unless-stopped

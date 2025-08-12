@@ -1,5 +1,6 @@
 package kr.hhplus.be.server.coupon.domain;
 
+import kr.hhplus.be.server.IntegrationTestContainersConfig;
 import kr.hhplus.be.server.user.domain.User;
 import kr.hhplus.be.server.user.domain.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,7 +13,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.TestcontainersConfiguration;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ActiveProfiles("test")
-@Import(TestcontainersConfiguration.class) // 생략 가능
+@Import(IntegrationTestContainersConfig.class)
 class CouponRepositoryIntegrationTest {
 
     @Autowired private CouponRepository couponRepository;

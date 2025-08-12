@@ -1,0 +1,29 @@
+clusterServersConfig:
+  nodeAddresses:
+    - "redis://host.docker.internal:7001"
+    - "redis://host.docker.internal:7002"
+    - "redis://host.docker.internal:7003"
+    - "redis://host.docker.internal:7004"
+    - "redis://host.docker.internal:7005"
+    - "redis://host.docker.internal:7006"
+  natMap:
+    "172.32.0.2:7001": "host.docker.internal:7001"
+    "172.32.0.3:7002": "host.docker.internal:7002"
+    "172.32.0.4:7003": "host.docker.internal:7003"
+    "172.32.0.5:7004": "host.docker.internal:7004"
+    "172.32.0.6:7005": "host.docker.internal:7005"
+    "172.32.0.7:7006": "host.docker.internal:7006"
+  scanInterval: 2000
+  connectTimeout: 10000
+  idleConnectionTimeout: 10000
+  timeout: 3000
+  retryAttempts: 3
+  retryInterval: 1500
+  password: null
+  sslEnableEndpointIdentification: true
+  pingConnectionInterval: 1000
+  keepAlive: true
+  tcpNoDelay: true
+
+threads: 4
+nettyThreads: 4
