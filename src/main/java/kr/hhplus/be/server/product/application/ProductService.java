@@ -19,20 +19,27 @@ public class ProductService {
     }
 
     public Product findById(Long productId) {
-        return productRepository.findById(productId)
-                .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
+        return productRepository.findById(productId).orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
     }
 
     @Transactional
     public Product verifyAndDecreaseStock(Long productId, int requiredQuantity) {
-        Product product = productRepository.findByIdForUpdate(productId)
-                .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
+//        Product product = productRepository.findByIdForUpdate(productId)
+//                .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
+//
+//        if (product.getStock() < requiredQuantity) {
+//            throw new IllegalStateException("상품 재고가 부족합니다.");
+//        }
+//
+//        product.decreaseStock(requiredQuantity);
+//        return product;
 
-        if (product.getStock() < requiredQuantity) {
-            throw new IllegalStateException("상품 재고가 부족합니다.");
+        int updatedRows = productRepository.decreaseStockIfAvailable(productId, requiredQuantity);
+
+        if (updatedRows == 0) {
+            throw new IllegalStateException("상품 재고가 부족하거나 상품을 찾을 수 없습니다.");
         }
-
-        product.decreaseStock(requiredQuantity);
-        return product;
+        return productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
     }
 }

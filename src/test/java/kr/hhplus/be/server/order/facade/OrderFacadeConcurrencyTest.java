@@ -70,7 +70,6 @@ public class OrderFacadeConcurrencyTest {
         userRepository.deleteAll();
         couponIdByUser.clear();
 
-
         IntStream.rangeClosed(1, 10).forEach(i -> {
             User u = userRepository.save(User.builder().name("user-" + i).build());
             balanceRepository.save(Balance.builder().user(u).balance(1_000_000).build());
