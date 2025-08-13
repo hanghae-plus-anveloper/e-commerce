@@ -27,7 +27,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.IntFunction;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -67,37 +68,21 @@ public class OrderFacadeConcurrencyTest {
         productRepository.deleteAll();
         balanceRepository.deleteAll();
         userRepository.deleteAll();
+        couponIdByUser.clear();
 
-        //
-        for (int i = 1; i <= 5; i++) {
+
+        IntStream.rangeClosed(1, 10).forEach(i -> {
             User u = userRepository.save(User.builder().name("user-" + i).build());
-            balanceRepository.save(Balance.builder()
-                    .user(u)
-                    .balance(1_000_000)
-                    .build());
-        }
+            balanceRepository.save(Balance.builder().user(u).balance(1_000_000).build());
+        });
 
         // 더미 상품 생성, 재고 10
-        for (int i = 1; i <= 5; i++) {
-            productRepository.save(Product.builder()
-                    .name("product-" + i)
-                    .price(100)
-                    .stock(10)
-                    .build());
-        }
+        IntStream.rangeClosed(1, 10).forEach(i -> {
+            productRepository.save(Product.builder().name("product-" + i).price(100).stock(10).build());
+        });
 
-        // 유효한 쿠폰 정책 > 쿠폰에 의한 실패 배제
-        CouponPolicy policy = couponPolicyRepository.save(
-                CouponPolicy.builder()
-                        .discountRate(0.1)
-                        .discountAmount(0)
-                        .availableCount(1000)
-                        .remainingCount(1000)
-                        .startedAt(LocalDateTime.now().minusDays(1))
-                        .endedAt(LocalDateTime.now().plusDays(1))
-                        .expireDays(30)
-                        .build()
-        );
+        // 유효한 쿠폰 정책 > 쿠폰에 의한 실패 배제, 사용만 통제
+        CouponPolicy policy = couponPolicyRepository.save(CouponPolicy.builder().discountRate(0.1).discountAmount(0).availableCount(10_000).remainingCount(10_000).startedAt(LocalDateTime.now().minusDays(1)).endedAt(LocalDateTime.now().plusDays(1)).expireDays(30).build());
 
         // 사용자별 쿠폰 사용 추가
         userRepository.findAll().forEach(u -> {
@@ -107,50 +92,42 @@ public class OrderFacadeConcurrencyTest {
     }
 
     @Test
-    @DisplayName("")
+    @DisplayName("재고가 10인 10개의 상품을 10명이서 5종류 씩 순서에 상관없이 2개씩 구매할때, 10개의 상품이 모두 정상적으로 판매된다.")
     void placeOrders_concurrently() throws InterruptedException {
-        List<User> users = userRepository.findAll().stream()
-                .sorted(Comparator.comparing(User::getId))
-                .toList();
-        List<Product> products = productRepository.findAll().stream()
-                .sorted(Comparator.comparing(Product::getId))
-                .toList();
+        List<User> users = userRepository.findAll().stream().sorted(Comparator.comparing(User::getId)).toList();
+        List<Product> products = productRepository.findAll().stream().sorted(Comparator.comparing(Product::getId)).toList();
 
-        IntFunction<Long> userId = i -> users.get(i - 1).getId();
-        IntFunction<Long> productId = i -> products.get(i - 1).getId();
+        final int userCount = users.size();             // 사용자 수 10
+        final int productCount = products.size();       // 상품 수 10
+        final int picksPerUser = 5;                     // 사용자 별 5개 상품 선택
+        final int qtyPerPick = 2;                       // 2개씩 구매,
+
+        final int initialTotalStock = products.stream().mapToInt(Product::getStock).sum();
+        assertThat(initialTotalStock).isEqualTo(100); // 재고 10개씩 총 100개
 
         Map<Long, List<OrderItemCommand>> carts = new LinkedHashMap<>();
+        for (int u = 0; u < userCount; u++) {
+            Long userId = users.get(u).getId();
 
-        carts.put(userId.apply(1), List.of(
-                new OrderItemCommand(productId.apply(3), 2),
-                new OrderItemCommand(productId.apply(1), 3),
-                new OrderItemCommand(productId.apply(5), 2)
-        ));
-        carts.put(userId.apply(2), List.of(
-                new OrderItemCommand(productId.apply(1), 3),
-                new OrderItemCommand(productId.apply(3), 2),
-                new OrderItemCommand(productId.apply(5), 2)
-        ));
-        carts.put(userId.apply(3), List.of(
-                new OrderItemCommand(productId.apply(2), 2),
-                new OrderItemCommand(productId.apply(4), 2),
-                new OrderItemCommand(productId.apply(1), 3)
-        ));
-        carts.put(userId.apply(4), List.of(
-                new OrderItemCommand(productId.apply(4), 3),
-                new OrderItemCommand(productId.apply(2), 2),
-                new OrderItemCommand(productId.apply(1), 3)
-        ));
-        carts.put(userId.apply(5), List.of(
-                new OrderItemCommand(productId.apply(5), 3),
-                new OrderItemCommand(productId.apply(3), 2),
-                new OrderItemCommand(productId.apply(2), 2)
-        ));
 
-        int threads = carts.size();
-        ExecutorService executor = Executors.newFixedThreadPool(threads);
+            List<OrderItemCommand> original = new ArrayList<>();
+            for (int k = 0; k < picksPerUser; k++) {
+                int pIndex = (u + k) % productCount;
+                Long productId = products.get(pIndex).getId();
+                original.add(new OrderItemCommand(productId, qtyPerPick));
+            }
+
+            List<OrderItemCommand> shuffled = new ArrayList<>(original);
+            Collections.shuffle(shuffled, new Random(userId));
+
+            System.out.printf("사용자: %d,\t원본: [%s],\t랜덤: [%s]%n", userId, formatCart(original), formatCart(shuffled));
+
+            carts.put(userId, shuffled);
+        }
+
+        ExecutorService executor = Executors.newFixedThreadPool(userCount);
         CountDownLatch start = new CountDownLatch(1);
-        CountDownLatch done = new CountDownLatch(threads);
+        CountDownLatch done = new CountDownLatch(userCount);
 
         AtomicInteger success = new AtomicInteger();
         List<Throwable> errors = new CopyOnWriteArrayList<>();
@@ -170,22 +147,33 @@ public class OrderFacadeConcurrencyTest {
         }));
 
         start.countDown();
-        done.await(30, TimeUnit.SECONDS);
+        boolean finished = done.await(30, TimeUnit.SECONDS);
         executor.shutdownNow();
 
-        if (!errors.isEmpty()) {
-            errors.forEach(e -> System.out.println(e.getClass().getSimpleName() + ": " + e.getMessage()));
+        if (!finished) {
+            System.out.println("타임아웃으로 일부 작업이 완료되지 않았습니다.");
         }
 
-        assertThat(success.get()).isEqualTo(threads);
+        if (!errors.isEmpty()) {
+            System.out.println("예외 발생 수: " + errors.size());
+            errors.stream().limit(10).forEach(e -> System.out.println(e.getClass().getSimpleName() + ": " + e.getMessage()));
+        }
 
-        productRepository.findAll().forEach(p ->
-                assertThat(p.getStock()).as("stock of " + p.getName()).isGreaterThanOrEqualTo(0));
+        assertThat(success.get()).as("주문 성공 수: %s", success.get()).isEqualTo(userCount);
 
-        int expectedSold = threads * 6;
-        int initialTotal = 5 * 10;
-        int currentTotal = productRepository.findAll().stream().mapToInt(Product::getStock).sum();
-        int realSold = initialTotal - currentTotal;
-        assertThat(realSold).isEqualTo(expectedSold);
+        List<Product> after = productRepository.findAll().stream().sorted(Comparator.comparing(Product::getId)).toList();
+        after.forEach(p -> System.out.println(p.getName() + "\t(id=" + p.getId() + ")\tstock=" + p.getStock()));
+
+        int currentTotal = after.stream().mapToInt(Product::getStock).sum();
+        int expectedSold = userCount * picksPerUser * qtyPerPick;
+        int realSold = initialTotalStock - currentTotal;
+
+        assertThat(realSold).as("총 판매 수량: %s, 기대치: %s", realSold, expectedSold).isEqualTo(expectedSold);
+
+        assertThat(after).allSatisfy(p -> assertThat(p.getStock()).as("%s(id=%s) 최종 재고가 0이어야 합니다.", p.getName(), p.getId()).isEqualTo(0));
+    }
+
+    private static String formatCart(List<OrderItemCommand> list) {
+        return list.stream().map(c -> String.format("%d x%d", c.getProductId(), c.getQuantity())).collect(Collectors.joining(", "));
     }
 }
