@@ -6,6 +6,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.redisson.RedissonMultiLock;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.core.Ordered;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -57,34 +57,61 @@ public class DistributedLockAspect {
 
         List<String> lockKeys = toKeys(prefixStr, idsVal).stream().sorted().toList();; // 키 목록 생성, 정렬
 
-        List<RLock> acquiredLocks = new ArrayList<>();
+        if (lockKeys.isEmpty()) {
+            return joinPoint.proceed();
+        }
+
+        List<RLock> lockList = lockKeys.stream()
+                .map(redissonClient::getLock)
+                .collect(Collectors.toList());
+        RedissonMultiLock multiLock = new RedissonMultiLock(lockList.toArray(new RLock[0]));
 
         try {
-            for (String key : lockKeys) {
-                RLock lock = redissonClient.getLock(key); // 정렬된 순서대로 락획득
-                boolean locked = lock.tryLock(
-                        distributedLock.waitTimeoutMillis(),
-                        distributedLock.ttlMillis(),
-                        TimeUnit.MILLISECONDS
-                );
-                if (!locked) {
-                    for (RLock l : acquiredLocks) {
-                        try { l.unlock(); } catch (Exception ignore) {}
-                    }
-                    throw new IllegalStateException("Failed to acquire lock: " + key);
-                }
-                acquiredLocks.add(lock);
+            boolean locked = multiLock.tryLock(
+                    distributedLock.waitTimeoutMillis(),
+                    distributedLock.ttlMillis(),
+                    TimeUnit.MILLISECONDS
+            );
+            if (!locked) {
+                throw new IllegalStateException("Failed to acquire multi lock: " + lockKeys);
             }
-
-            return joinPoint.proceed(); // 비즈니스 로직 실행
+            return joinPoint.proceed();
         } finally {
-            Collections.reverse(acquiredLocks);
-            for (RLock l : acquiredLocks) {
-                try { l.unlock(); } catch (IllegalMonitorStateException e) {
-                    log.info("Lock already unlocked: {}", l.getName());
-                }
+            try {
+                multiLock.unlock(); // 하나라도 잡혀 있으면 모두 해제
+            } catch (IllegalMonitorStateException e) {
+                log.info("MultiLock already unlocked: keys={}", lockKeys);
             }
         }
+
+//        List<RLock> acquiredLocks = new ArrayList<>();
+//
+//        try {
+//            for (String key : lockKeys) {
+//                RLock lock = redissonClient.getLock(key); // 정렬된 순서대로 락획득(수동)
+//                boolean locked = lock.tryLock(
+//                        distributedLock.waitTimeoutMillis(),
+//                        distributedLock.ttlMillis(),
+//                        TimeUnit.MILLISECONDS
+//                );
+//                if (!locked) {
+//                    for (RLock l : acquiredLocks) {
+//                        try { l.unlock(); } catch (Exception ignore) {}
+//                    }
+//                    throw new IllegalStateException("Failed to acquire lock: " + key);
+//                }
+//                acquiredLocks.add(lock);
+//            }
+//
+//            return joinPoint.proceed(); // 비즈니스 로직 실행
+//        } finally {
+//            Collections.reverse(acquiredLocks);
+//            for (RLock l : acquiredLocks) {
+//                try { l.unlock(); } catch (IllegalMonitorStateException e) {
+//                    log.info("Lock already unlocked: {}", l.getName());
+//                }
+//            }
+//        }
     }
 
     @SuppressWarnings("unchecked")
