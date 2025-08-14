@@ -23,6 +23,11 @@ public class CouponFacade {
         return couponService.issueCoupon(user, policyId);
     }
 
+    @Transactional
+    public Coupon useCoupon(Long userId, Long policyId) {
+        return couponService.useCoupon(policyId, userId);
+    }
+
     @Transactional(readOnly = true)
     public List<Coupon> getCoupons(Long userId) {
         return couponService.getCoupons(userId);
