@@ -1,8 +1,12 @@
 # E-commerce 동시성 문제 - 분산락, Redis
 
-## 동시성 문제 식별
+## 목차
 
-### `OrderFacadeConcurrencyTest` 통합 테스트 목적
+- [기능별 통합 테스트](#orderfacadeconcurrencytest-통합-테스트-목적)
+- [Redis 분산락 적용](#redis-및-분산락-적용)
+- [Test Container 구성](#testcontainer-세팅)
+
+## `OrderFacadeConcurrencyTest` 통합 테스트 목적
 
 - 사용자 및 상품의 갯수가 충분할 때, 모든 주문이 정상적으로 성공해야 한다.
 - [OrderFacadeConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/order/facade/OrderFacadeConcurrencyTest.java)
