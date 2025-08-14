@@ -293,3 +293,32 @@
     }
     ```
   - 모든 통합 테스트에 `@ActiveProfiles("test")`로 동작함
+
+
+## `CouponFacadeConcurrencyTest` 쿠폰 선착순 발급 통합 테스트 목적
+
+- 쿠폰의 정해진 개수 만큼만 쿠폰이 발급되어야 한다.
+- [CouponFacadeConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/coupon/facade/CouponFacadeConcurrencyTest.java)
+
+### 조건
+
+- 수량이 10개인 쿠폰 정책에 대하여 20명의 사용자가 발급을 시도한다.
+
+### 테스트 결과
+
+![분산락 미적용으로도 제한은 가능](./assets/004-issue-coupon.png)
+
+- 분산락 적용 전 이미 테스트를 통과
+- 테스트의 목적인 **잔여 수량만큼만 발급**하는 것은 이전 주차에 적용한 조건부 업데이트 쿼리만으로도 통과 가능
+  ```java
+  @Modifying(clearAutomatically = true)
+  @Query("""
+      UPDATE CouponPolicy cp
+         SET cp.remainingCount = cp.remainingCount - 1
+       WHERE cp.id = :policyId
+         AND cp.remainingCount > 0
+  """)
+  int decreaseRemainingCount(@Param("policyId") Long policyId);
+  ``` 
+- 다만 분산락으로도 선착순이라는 비즈니스 로직은 충족할 수 없기 때문에, 
+- 차후 Kafka 추가 시 정확한 비즈니스 로직을 구현하는 것으로 대체
