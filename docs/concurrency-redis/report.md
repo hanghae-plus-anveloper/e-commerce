@@ -1,6 +1,6 @@
 # E-commerce 동시성 문제 - 분산락, Redis
 
-## 목차
+## STEP11 점검항목
 
 - [기능별 통합 테스트](#orderfacadeconcurrencytest-통합-테스트-목적)
 - [Redis 분산락 적용](#redis-및-분산락-적용)
