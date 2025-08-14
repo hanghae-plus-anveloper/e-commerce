@@ -1,7 +1,7 @@
 package kr.hhplus.be.server.analytics.application;
 
 import kr.hhplus.be.server.IntegrationTestContainersConfig;
-import kr.hhplus.be.server.analytics.dto.TopProductView;
+import kr.hhplus.be.server.analytics.domain.TopProductView;
 import kr.hhplus.be.server.order.domain.OrderItem;
 import kr.hhplus.be.server.order.domain.OrderItemRepository;
 import kr.hhplus.be.server.product.domain.Product;
