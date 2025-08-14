@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,16 +44,17 @@ public class CouponServiceConcurrencyTest {
     @Autowired
     private CouponService couponService;
 
-    private Coupon issuedCoupon;
-    private User user;
-
     @BeforeEach
     void setUp() {
         couponRepository.deleteAll();
         userRepository.deleteAll();
         couponPolicyRepository.deleteAll();
+    }
 
-        user = userRepository.save(User.builder().name("test-user").build());
+    @Test
+    @DisplayName("동시에 동일한 쿠폰을 사용하려고 할 때 중복 사용이 발생하지 않아야 한다")
+    void useCoupon_concurrently_only_once_used() throws InterruptedException {
+        User user = userRepository.save(User.builder().name("test-user").build());
 
         CouponPolicy policy = couponPolicyRepository.save(CouponPolicy.builder()
                 .discountAmount(1000)
@@ -63,18 +65,14 @@ public class CouponServiceConcurrencyTest {
                 .expireDays(30)
                 .build());
 
-        issuedCoupon = couponRepository.save(Coupon.builder()
+        Coupon issuedCoupon = couponRepository.save(Coupon.builder()
                 .policy(policy)
                 .user(user)
                 .discountAmount(policy.getDiscountAmount())
                 .discountRate(policy.getDiscountRate())
                 .used(false)
                 .build());
-    }
 
-    @Test
-    @DisplayName("동시에 동일한 쿠폰을 사용하려고 할 때 중복 사용이 발생하지 않아야 한다")
-    void useCoupon_concurrently_only_once_used() throws InterruptedException {
         int threadCount = 10;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
@@ -112,5 +110,60 @@ public class CouponServiceConcurrencyTest {
 
         assertThat(result.isUsed()).isTrue();
         assertThat(successCount.get()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("동시에 쿠폰 발급을 시도해도 초과 발급되지 않는다.")
+    void issueCoupon_concurrently() throws InterruptedException {
+        for (int i = 1; i <= 20; i++) {
+            userRepository.save(User.builder().name("user-" + i).build());
+        }
+
+        int remainingCount = 10;
+
+        CouponPolicy policy = couponPolicyRepository.save(
+                CouponPolicy.builder()
+                        .discountAmount(1000)
+                        .discountRate(0.0)
+                        .availableCount(remainingCount)
+                        .remainingCount(remainingCount)
+                        .expireDays(30)
+                        .startedAt(LocalDateTime.now().minusDays(1))
+                        .endedAt(LocalDateTime.now().plusDays(1))
+                        .build());
+
+        List<User> users = userRepository.findAll();
+
+        ExecutorService executor = Executors.newFixedThreadPool(users.size());
+        CountDownLatch start = new CountDownLatch(1);
+        CountDownLatch done = new CountDownLatch(users.size());
+
+        AtomicInteger successCount = new AtomicInteger();
+        AtomicInteger failCount = new AtomicInteger();
+
+        for (User user : users) {
+            executor.submit(() -> {
+                try {
+                    start.await(); // 동시에 시작
+                    couponService.issueCoupon(user, policy.getId());
+                    successCount.incrementAndGet();
+                } catch (Exception e) {
+                    failCount.incrementAndGet();
+                    System.out.printf("실패 userId:\t%d\t(%s)%n", user.getId(), e.getMessage());
+                } finally {
+                    done.countDown();
+                }
+            });
+        }
+
+        start.countDown();
+        done.await(10, TimeUnit.SECONDS);
+        executor.shutdownNow();
+
+        System.out.println("성공: " + successCount.get());
+        System.out.println("실패: " + failCount.get());
+        System.out.println("DB 저장된 쿠폰 수: " + couponRepository.count());
+
+        assertThat(successCount.get()).isEqualTo(remainingCount);
     }
 }
