@@ -16,13 +16,10 @@ public record TopProductResponseDto(
         Long soldQty
 ) {
     @Builder
-    public TopProductResponseDto {}
+    public TopProductResponseDto {
+    }
 
     public static TopProductResponseDto fromView(kr.hhplus.be.server.analytics.domain.TopProductView view) {
-        return new TopProductResponseDto(
-                view.productId(),
-                view.name(),
-                view.soldQty()
-        );
+        return new TopProductResponseDto(view.productId(), view.name(), view.soldQty());
     }
 }
