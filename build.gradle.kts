@@ -59,6 +59,13 @@ dependencies {
 
 	testImplementation("com.h2database:h2")
 	testImplementation("io.rest-assured:rest-assured:5.4.0")
+
+	implementation("io.netty:netty-resolver-dns-native-macos:4.1.108.Final:osx-aarch_64")
+
+	// Redis, Cache
+	implementation("org.springframework.boot:spring-boot-starter-data-redis")
+	implementation("org.redisson:redisson-spring-boot-starter:3.50.0")
+	implementation("org.springframework.boot:spring-boot-starter-cache")
 }
 
 tasks.withType<Test> {

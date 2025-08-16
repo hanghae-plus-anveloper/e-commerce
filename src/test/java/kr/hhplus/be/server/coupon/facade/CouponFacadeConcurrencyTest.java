@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.coupon.facade;
 
-import kr.hhplus.be.server.coupon.domain.Coupon;
+import kr.hhplus.be.server.IntegrationTestContainersConfig;
 import kr.hhplus.be.server.coupon.domain.CouponPolicy;
 import kr.hhplus.be.server.coupon.domain.CouponPolicyRepository;
 import kr.hhplus.be.server.coupon.domain.CouponRepository;
@@ -15,78 +15,97 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.TestcontainersConfiguration;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.stream.IntStream;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
-@Testcontainers
 @ActiveProfiles("test")
-@Import(TestcontainersConfiguration.class)
+@Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Import(IntegrationTestContainersConfig.class)
 public class CouponFacadeConcurrencyTest {
 
     @Autowired
-    private CouponFacade couponFacade;
-    @Autowired
     private CouponRepository couponRepository;
+
     @Autowired
     private CouponPolicyRepository couponPolicyRepository;
+
     @Autowired
     private UserRepository userRepository;
 
-    private CouponPolicy policy;
+    @Autowired
+    private CouponFacade couponFacade;
 
     @BeforeEach
     void setUp() {
         couponRepository.deleteAll();
-        userRepository.deleteAll();
         couponPolicyRepository.deleteAll();
+        userRepository.deleteAll();
 
-        policy = couponPolicyRepository.save(CouponPolicy.builder()
-                .discountAmount(1000)
-                .availableCount(3) // 발급 수량 3개
-                .remainingCount(3)
-                .startedAt(LocalDateTime.now().minusDays(1))
-                .endedAt(LocalDateTime.now().plusDays(1))
-                .expireDays(30)
-                .build());
     }
 
     @Test
-    @DisplayName("동시에 여러 유저가 쿠폰을 발급받더라도 초과 발급되지 않는다")
-    void issueCoupon_concurrently_limit_not_exceed() throws InterruptedException {
-        int threadCount = 10; // 10명의 스레드 생성
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch latch = new CountDownLatch(threadCount);
+    @DisplayName("동시에 쿠폰 발급을 시도해도 초과 발급되지 않는다.")
+    void issueCoupon_concurrently() throws InterruptedException {
+        for (int i = 1; i <= 20; i++) {
+            userRepository.save(User.builder().name("user-" + i).build());
+        }
 
-        List<CompletableFuture<Void>> futures = IntStream.rangeClosed(1, threadCount).mapToObj(i -> CompletableFuture.runAsync(() -> {
-            try {
-                User user = userRepository.save(User.builder().name("user-" + i).build());
+        int remainingCount = 10;
 
-                couponFacade.issueCoupon(user.getId(), policy.getId());
-            } catch (Exception e) {
-                // e.printStackTrace();
-                // fail("error: " + e.getMessage());
-            } finally {
-                latch.countDown();
-            }
-        }, executor)).toList();
+        CouponPolicy policy = couponPolicyRepository.save(
+                CouponPolicy.builder()
+                        .discountAmount(1000)
+                        .discountRate(0.0)
+                        .availableCount(remainingCount)
+                        .remainingCount(remainingCount)
+                        .expireDays(30)
+                        .startedAt(LocalDateTime.now().minusDays(1))
+                        .endedAt(LocalDateTime.now().plusDays(1))
+                        .build());
 
-        latch.await();
+        List<User> users = userRepository.findAll();
 
-        List<Coupon> issued = couponRepository.findAllWithUser();
-        issued.forEach(c -> System.out.println("발급된 쿠폰: " + c.getId() + ", 사용자: " + c.getUser().getName()));
+        ExecutorService executor = Executors.newFixedThreadPool(users.size());
+        CountDownLatch start = new CountDownLatch(1);
+        CountDownLatch done = new CountDownLatch(users.size());
 
-        System.out.println("발급된 쿠폰 수: " + issued.size());
-        assertThat(issued).hasSize(3); // 발급 수량 초과되지 않아야 함
+        AtomicInteger successCount = new AtomicInteger();
+        AtomicInteger failCount = new AtomicInteger();
+
+        for (User user : users) {
+            executor.submit(() -> {
+                try {
+                    start.await(); // 동시에 시작
+                    couponFacade.issueCoupon(user.getId(), policy.getId());
+                    successCount.incrementAndGet();
+                } catch (Exception e) {
+                    failCount.incrementAndGet();
+                    System.out.printf("실패 userId:\t%d\t(%s)%n", user.getId(), e.getMessage());
+                } finally {
+                    done.countDown();
+                }
+            });
+        }
+
+        start.countDown();
+        done.await(10, TimeUnit.SECONDS);
+        executor.shutdownNow();
+        executor.awaitTermination(5, TimeUnit.SECONDS); // 완전 종료 대기
+
+        System.out.println("성공: " + successCount.get());
+        System.out.println("실패: " + failCount.get());
+        System.out.println("DB 저장된 쿠폰 수: " + couponRepository.count());
+
+        assertThat(successCount.get()).isEqualTo(remainingCount);
     }
 }

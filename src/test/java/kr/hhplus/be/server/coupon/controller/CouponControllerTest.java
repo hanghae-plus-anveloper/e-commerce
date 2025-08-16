@@ -2,6 +2,7 @@ package kr.hhplus.be.server.coupon.controller;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import kr.hhplus.be.server.IntegrationTestContainersConfig;
 import kr.hhplus.be.server.coupon.domain.CouponPolicy;
 import kr.hhplus.be.server.coupon.domain.CouponPolicyRepository;
 import kr.hhplus.be.server.coupon.domain.CouponRepository;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -23,6 +25,7 @@ import static org.hamcrest.Matchers.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
+@Import(IntegrationTestContainersConfig.class)
 class CouponControllerTest {
 
     @LocalServerPort

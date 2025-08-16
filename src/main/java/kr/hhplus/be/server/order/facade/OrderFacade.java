@@ -1,6 +1,8 @@
 package kr.hhplus.be.server.order.facade;
 
 import kr.hhplus.be.server.balance.application.BalanceService;
+import kr.hhplus.be.server.common.lock.DistributedLock;
+import kr.hhplus.be.server.common.lock.LockKey;
 import kr.hhplus.be.server.coupon.application.CouponService;
 import kr.hhplus.be.server.coupon.domain.Coupon;
 import kr.hhplus.be.server.order.application.OrderService;
@@ -28,6 +30,7 @@ public class OrderFacade {
     private final BalanceService balanceService;
 
     @Transactional
+    @DistributedLock(prefix = LockKey.PRODUCT, ids = "#orderItems.![productId]")
     public Order placeOrder(Long userId, List<OrderItemCommand> orderItems, Long couponId) {
         User user = userService.findById(userId);
 

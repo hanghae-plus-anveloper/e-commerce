@@ -2,6 +2,7 @@ package kr.hhplus.be.server.order.controller;
 
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import kr.hhplus.be.server.IntegrationTestContainersConfig;
 import kr.hhplus.be.server.balance.domain.Balance;
 import kr.hhplus.be.server.balance.domain.BalanceRepository;
 import kr.hhplus.be.server.coupon.domain.Coupon;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -30,6 +32,7 @@ import static org.hamcrest.Matchers.notNullValue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
+@Import(IntegrationTestContainersConfig.class)
 class OrderControllerTest {
 
     @LocalServerPort
