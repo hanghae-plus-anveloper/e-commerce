@@ -111,10 +111,10 @@
 
 ## 기능 구현
 
-### Redis 저장/조회 로직 구현 
+### Redis 저장 함수 / 집계 로직 구현 
 
 - [TopProductRedisService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/analytics/application/TopProductRedisService.java)
-- 주문이 발생할 때 Redis에 반영하기 위한 TopProductService 구현
+- 주문이 발생할 때 Redis에 반영하기 위한 `TopProductRedisService` 구현
   - 기존 DB 쿼리 기반인 `TopProductQueryService`와 분리하여 구현했습니다.
   - `OrderFacade`에서 사용하는 계층으로 위치시켰습니다.
 
@@ -198,4 +198,64 @@
 - 1번 상품이 없어서 테스트 실패
   - 오늘자 데이터는 OrderFacade에 placeOrder로 생성되어야 하기 때문에 아직 미구현
 
-## 
+### 주문 생성 시 Redis 저장 로직 구현
+
+- [OrderFacade.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/order/facade/OrderFacade.java) 수정
+  - 주문 생성 이후 (트랜젝션 내에서) redis에 비동기 적으로 저장하도록 요청 
+    - 기존에 repository에 주문을 저장하면서 return 하는 부분은 order로 담아두고,
+    - items 배열에서 ProductId와 quantity만 사용하여 topProductRedisService에 비동기로 요청합니다.    
+    ```java
+    @Transactional
+    @DistributedLock(prefix = LockKey.PRODUCT, ids = "#orderItems.![productId]")
+    public Order placeOrder(Long userId, List<OrderItemCommand> orderItems, Long couponId) {
+        /* ... */
+        
+        Order order = orderService.createOrder(user, items, total);
+    
+        List<TopProductRankingDto> rankingDtos = items.stream()
+                .map(i -> new TopProductRankingDto(i.getProduct().getId().toString(), i.getQuantity()))
+                .toList();
+    
+        // 비동기로 요청
+        topProductRedisService.recordOrdersAsync(rankingDtos);    
+    
+        return order;
+    }
+    ```
+  - 현재 상태는 트랜젝션 내부에서 실행중이므로, 커밋이 보장되지 않을 수 있음 
+  - `Transactional Outbox` 패턴을 추후에 적용하여 이벤트 방식으로 수정 필요
+
+- [TopProductRedisService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/analytics/application/TopProductRedisService.java)
+  - `recordOrdersAsync` 함수 추가
+    - `@Async` 어노테이션을 사용하기 위해 OrderFacade 외부에 선언 필요
+    - 배열을 받아서 `Redis`에 저장하되, 저장 시마다 `try {} catch (ignored){}` 로 에러가 반환되지 않도록 구현
+    ```java
+    @Async
+    public void recordOrdersAsync(List<TopProductRankingDto> items) {
+        for (TopProductRankingDto item : items) {
+            try {
+                recordOrder(item.productId(), (int) item.soldQty());
+            } catch (Exception ignored) {
+            }
+        }
+    }
+    ```
+  
+### 구현 후 테스트 성공 결과
+
+![성공](./assets/003-ranking-place-order-success.png)
+
+- 처음 의도한 대로, 세팅은 4개 상품만 노출되며,
+- 오늘자 주문이 모두 추가된 뒤에는 1번 상품이 포함되고, 1번으로 표기가 됨
+- 나머지 주문들도 오늘가 수량이 정상적으로 합산되는 것 확인
+
+## 추후계획
+
+- 생성된 주문이 다시 집계가 되지 않도록 멱등 키(`RANK:PROCESSED:{orderId}`) 추가 로직 구현
+- 생성 시점의 DB와 Redis 정합성 보장을 위해 이벤트를 활용한 `Transactional Outbox` 패턴 적용 예정
+
+## 회고
+
+- 이제 설계 > 테스트 코드 작성 > 컴파일만 성공 구현 > 기능 구현 순으로 개발하는 것에 익숙해진 것 같습니다.
+- `TopProductRedisService`에서 활용하는 `TopProductRankingDto`는 `domain`에서 가져다 사용하는 DTO가 아니어서 application에 같이 배치했는데, 아직 DTO를 어디에 둬야 할 지 헷갈립니다. 
+- 과제 끝내고 다시한번 레이어드에서 DTO 어디에 두는 지 복습하는 시간을 갖겠습니다..
