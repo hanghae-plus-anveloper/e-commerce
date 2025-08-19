@@ -20,6 +20,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -102,6 +103,6 @@ public class TopProductRedisServiceTest {
 
     // 오늘 날짜 이전(어제 ~ ) 데이터는 service에 직접 주입(집계용)
     private void record(Product product, int qty, int daysAgo) {
-        topProductRedisService.recordOrder(product.getId().toString(), qty);
+        topProductRedisService.recordOrder(product.getId().toString(), qty, LocalDate.now().minusDays(daysAgo));
     }
 }
