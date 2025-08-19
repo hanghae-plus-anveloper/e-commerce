@@ -3,6 +3,7 @@ package kr.hhplus.be.server.analytics.application;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -27,6 +28,17 @@ public class TopProductRedisService {
     private String getDailyKey(LocalDate date) {
         return PRODUCT_RANKING_PREFIX + date.format(FORMATTER);
     }
+
+    @Async
+    public void recordOrdersAsync(List<TopProductRankingDto> items) {
+        for (TopProductRankingDto item : items) {
+            try {
+                recordOrder(item.productId(), (int) item.soldQty());
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
 
     // 당일
     public void recordOrder(String productId, int quantity) {

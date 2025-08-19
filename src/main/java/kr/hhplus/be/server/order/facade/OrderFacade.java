@@ -1,5 +1,7 @@
 package kr.hhplus.be.server.order.facade;
 
+import kr.hhplus.be.server.analytics.application.TopProductRankingDto;
+import kr.hhplus.be.server.analytics.application.TopProductRedisService;
 import kr.hhplus.be.server.balance.application.BalanceService;
 import kr.hhplus.be.server.common.lock.DistributedLock;
 import kr.hhplus.be.server.common.lock.LockKey;
@@ -28,6 +30,7 @@ public class OrderFacade {
     private final CouponService couponService;
     private final OrderService orderService;
     private final BalanceService balanceService;
+    private final TopProductRedisService topProductRedisService;
 
     @Transactional
     @DistributedLock(prefix = LockKey.PRODUCT, ids = "#orderItems.![productId]")
@@ -57,7 +60,23 @@ public class OrderFacade {
 
         balanceService.useBalance(user, total);
 
-        return orderService.createOrder(user, items, total);
+        Order order = orderService.createOrder(user, items, total);
+
+
+        List<TopProductRankingDto> rankingDtos = items.stream()
+                .map(i -> new TopProductRankingDto(i.getProduct().getId().toString(), i.getQuantity()))
+                .toList();
+
+        // 비동기로 요청
+        topProductRedisService.recordOrdersAsync(rankingDtos);
+
+
+        return order;
     }
 
+    void asyncRecordOrder(List<OrderItem> items) {
+        items.forEach(item ->
+                topProductRedisService.recordOrder(item.getProduct().getId().toString(), item.getQuantity())
+        );
+    }
 }
