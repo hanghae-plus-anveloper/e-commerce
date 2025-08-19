@@ -45,5 +45,9 @@
 
 ## 테스트 코드 작성
 
+- [TopProductRedisServiceTest.java]()
+
+  - 실패 테스트 작성 결과
+    ![실패 - 컴파일만 성공 상태](./assets/001-ranking-place-order-fail.png)
 
 ## 기능 구현
