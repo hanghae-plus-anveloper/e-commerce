@@ -4,9 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
@@ -14,14 +16,16 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class TopProductRedisService {
 
     private final StringRedisTemplate redisTemplate;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
 
+    private static final int TTL_DAYS = 4;
+    private static final String PRODUCT_RANKING_PREFIX = "RANKING:PRODUCT:";
+
     private String getDailyKey(LocalDate date) {
-        return "RANKING:PRODUCT:" + date.format(FORMATTER);
+        return PRODUCT_RANKING_PREFIX + date.format(FORMATTER);
     }
 
     // 당일
@@ -33,6 +37,10 @@ public class TopProductRedisService {
     public void recordOrder(String productId, int quantity, LocalDate date) {
         String key = getDailyKey(date);
         redisTemplate.opsForZSet().incrementScore(key, productId, quantity);
+
+        LocalDateTime expireAt = date.plusDays(TTL_DAYS).atStartOfDay();
+        Instant instant = expireAt.atZone(ZoneId.systemDefault()).toInstant();
+        redisTemplate.expireAt(key, instant);
     }
 
     public List<TopProductRankingDto> getTop5InLast3Days() {
@@ -43,7 +51,7 @@ public class TopProductRedisService {
                 getDailyKey(today.minusDays(2))
         );
 
-        String unionKey = "RANKING:PRODUCT:TOP5LAST3DAYS";
+        String unionKey =  PRODUCT_RANKING_PREFIX + "TOP5LAST3DAYS";
 
         // 합집합 새로 저장
         redisTemplate.opsForZSet().unionAndStore(keys.get(0), keys.subList(1, keys.size()), unionKey);
