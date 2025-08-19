@@ -81,7 +81,7 @@ public class TopProductRedisServiceTest {
     void top5InLast3DaysWithRedis() {
 
         List<TopProductRankingDto> before = topProductRedisService.getTop5InLast3Days();
-        System.out.println("오늘자 주문 발생 전 집계: " + before);
+        printRanking("오늘자 주문 발생 전 집계", before);
 
         // 오늘 자 주문 생성, 생성 시 Redis에 추가 되는 지, 집계 결과에 합산 되는 지 확인
         IntStream.rangeClosed(1, 5).forEach(i -> place(p1, 10)); // 오늘, 5회 * 10개 = 50개 TOP 1
@@ -91,7 +91,7 @@ public class TopProductRedisServiceTest {
         IntStream.rangeClosed(1, 1).forEach(i -> place(p5, 1)); // 오늘, 2회 * 1개
 
         List<TopProductRankingDto> after = topProductRedisService.getTop5InLast3Days();
-        System.out.println("오늘자 주문 발생 후 집계: " + after);
+        printRanking("오늘자 주문 발생 후 집계", after);
 
         assertThat(after).hasSize(5);
         assertThat(after.get(0).productId()).isEqualTo(p1.getId().toString());
@@ -104,5 +104,17 @@ public class TopProductRedisServiceTest {
     // 오늘 날짜 이전(어제 ~ ) 데이터는 service에 직접 주입(집계용)
     private void record(Product product, int qty, int daysAgo) {
         topProductRedisService.recordOrder(product.getId().toString(), qty, LocalDate.now().minusDays(daysAgo));
+    }
+
+    private void printRanking(String title, List<TopProductRankingDto> rankings) {
+        System.out.println("=== " + title + " ===");
+        for (int i = 0; i < rankings.size(); i++) {
+            TopProductRankingDto dto = rankings.get(i);
+            System.out.printf("%d위 - 상품ID: %s, 판매수량: %d%n",
+                    i + 1,
+                    dto.productId(),
+                    dto.soldQty()
+            );
+        }
     }
 }
