@@ -77,27 +77,30 @@
   - 오늘자 주문 생성 후 상품 5개가 반환되는지 확인
   - 오늘 가장 주문을 많이 생성한 1번 상품이 3일 전체에서 1번인지 확인
   ```java
-    @Test
-    @DisplayName("최근 3일 간 누적 집계를 통해 Top5 상품을 Redis 집계 정보를 기반으로 조회한다")
-    void top5InLast3DaysWithRedis() {
+  @Test
+  @DisplayName("최근 3일 간 누적 집계를 통해 Top5 상품을 Redis 집계 정보를 기반으로 조회한다")
+  void top5InLast3DaysWithRedis() {
 
-        List<TopProductRankingDto> before = topProductRedisService.getTop5InLast3Days();
-        System.out.println("오늘자 주문 발생 전 집계: " + before);
+      List<TopProductRankingDto> before = topProductRedisService.getTop5InLast3Days();
+      System.out.println("오늘자 주문 발생 전 집계: " + before);
 
-        // 오늘 자 주문 생성, 생성 시 Redis에 추가 되는 지, 집계 결과에 합산 되는 지 확인
-        IntStream.rangeClosed(1, 5).forEach(i -> place(p1, 10)); // 오늘, 5회 * 10개 = 50개 TOP 1
-        IntStream.rangeClosed(1, 4).forEach(i -> place(p2, 1)); // 오늘, 4회 * 1개
-        IntStream.rangeClosed(1, 3).forEach(i -> place(p3, 1)); // 오늘, 3회 * 1개
-        IntStream.rangeClosed(1, 2).forEach(i -> place(p4, 1)); // 오늘, 2회 * 1개
-        IntStream.rangeClosed(1, 1).forEach(i -> place(p5, 1)); // 오늘, 2회 * 1개
+      // 오늘 자 주문 생성, 생성 시 Redis에 추가 되는 지, 집계 결과에 합산 되는 지 확인
+      IntStream.rangeClosed(1, 5).forEach(i -> place(p1, 10)); // 오늘, 5회 * 10개 = 50개 TOP 1
+      IntStream.rangeClosed(1, 4).forEach(i -> place(p2, 1)); // 오늘, 4회 * 1개
+      IntStream.rangeClosed(1, 3).forEach(i -> place(p3, 1)); // 오늘, 3회 * 1개
+      IntStream.rangeClosed(1, 2).forEach(i -> place(p4, 1)); // 오늘, 2회 * 1개
+      IntStream.rangeClosed(1, 1).forEach(i -> place(p5, 1)); // 오늘, 2회 * 1개
 
-        List<TopProductRankingDto> after = topProductRedisService.getTop5InLast3Days();
-        System.out.println("오늘자 주문 발생 후 집계: " + after);
+      List<TopProductRankingDto> after = topProductRedisService.getTop5InLast3Days();
+      System.out.println("오늘자 주문 발생 후 집계: " + after);
 
-        assertThat(after).hasSize(5);
-        assertThat(after.get(0).productId()).isEqualTo(p1.getId().toString());
-    }
+      assertThat(after).hasSize(5);
+      assertThat(after.get(0).productId()).isEqualTo(p1.getId().toString());
+  }
   ```
+  - `place`함수: `OrderFacade`에 주문을 생성하는 헬프 함수
+  - `record`함수: `TopProductRedisService`에 직접 기록하는 함수(오늘 이전 데이터 세팅)
+  - `printRanking`함수: 테스트 진행 간 집계 결과 출력용 함수
  
 ### 실패 테스트 작성 결과
  
@@ -106,6 +109,93 @@
 - 컴파일만 되는 상태 구현
   - 빈 배열만 반환
 
-
-
 ## 기능 구현
+
+### Redis 저장/조회 로직 구현 
+
+- [TopProductRedisService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/analytics/application/TopProductRedisService.java)
+- 주문이 발생할 때 Redis에 반영하기 위한 TopProductService 구현
+  - 기존 DB 쿼리 기반인 `TopProductQueryService`와 분리하여 구현했습니다.
+  - `OrderFacade`에서 사용하는 계층으로 위치시켰습니다.
+
+- 전체 코드(주요 로직)
+  ```java
+  @Service
+  @RequiredArgsConstructor
+  public class TopProductRedisService {
+  
+      private final StringRedisTemplate redisTemplate;
+      private static final DateTimeFormatter FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
+  
+      private static final int TTL_DAYS = 4;
+      private static final String PRODUCT_RANKING_PREFIX = "RANKING:PRODUCT:";
+  
+      private String getDailyKey(LocalDate date) {
+          return PRODUCT_RANKING_PREFIX + date.format(FORMATTER);
+      }
+  
+      // 당일
+      public void recordOrder(String productId, int quantity) {
+          recordOrder(productId, quantity, LocalDate.now());
+      }
+  
+      // 특정 일자
+      public void recordOrder(String productId, int quantity, LocalDate date) {
+          String key = getDailyKey(date);
+          redisTemplate.opsForZSet().incrementScore(key, productId, quantity);
+  
+          LocalDateTime expireAt = date.plusDays(TTL_DAYS).atStartOfDay(); // 단순 생성시간(java.time)으로 교체 가능
+          Instant instant = expireAt.atZone(ZoneId.systemDefault()).toInstant();
+          redisTemplate.expireAt(key, instant);
+      }
+  
+      public List<TopProductRankingDto> getTop5InLast3Days() {
+          LocalDate today = LocalDate.now();
+          List<String> keys = List.of(
+                  getDailyKey(today),
+                  getDailyKey(today.minusDays(1)),
+                  getDailyKey(today.minusDays(2))
+          );
+  
+          String unionKey =  PRODUCT_RANKING_PREFIX + "TOP5LAST3DAYS";
+  
+          // 합집합 새로 저장
+          redisTemplate.opsForZSet().unionAndStore(keys.get(0), keys.subList(1, keys.size()), unionKey);
+  
+          // score 값을 포함한 튜플 조회
+          Set<ZSetOperations.TypedTuple<String>> tuples =
+                  redisTemplate.opsForZSet().reverseRangeWithScores(unionKey, 0, 4);
+  
+          if (tuples == null) {
+              return List.of();
+          }
+  
+          return tuples.stream()
+                  .map(t -> new TopProductRankingDto(
+                          t.getValue(),
+                          t.getScore() != null ? t.getScore().intValue() : 0
+                  ))
+                  .collect(Collectors.toList());
+      }
+  }
+  ```
+
+- `redisTemplate.opsForZSet().incrementScore` 함수에 `key`, `value`, `delta`값을 사용하여 `score = score + delta`로 판매수량 누적
+- `redisTemplate.expireAt` 만료시간 주입(java.time 으로도 가능)
+- `redisTemplate.opsForZSet().unionAndStore`로 오늘자 키에 어제, 그제 키를 합침
+  - `productId`를 `value`로 같은 `score`는 합산되어 저장 
+  - `unionKey`는 이미 있는 경우 덮어씌워지기 때문에 일자가 바뀌면 이전 일자는 덮어쓰기 됨
+- `redisTemplate.opsForZSet().reverseRangeWithScores` 역순으로 0번 부터 4번까지 반환
+  - 튜플로 받아서 `score`값도 `soldQty`에 사용할 수 있도록 수정
+
+### 구현 후 테스트 결과
+
+![실패 - 집계 결과 출력](./assets/002-ranking-place-order-fail.png)
+
+- 집계 결과는 출력되는 것 확인
+- 하지만 5개가 아니라 4개만 반환되어 테스트 실패
+  - `setUp`에선 2 ~ 6번까지 5가지 상품을 넣었지만, 6번 상품은 3일 전 값으로 반영함 
+- 1번 상품이 없어서 테스트 실패
+  - 오늘자 데이터는 OrderFacade에 placeOrder로 생성되어야 하기 때문에 아직 미구현
+
+## 
