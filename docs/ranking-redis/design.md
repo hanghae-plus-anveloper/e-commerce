@@ -8,7 +8,7 @@
 ### 목표
 
 - 기존 DB(NativeQuery) + 캐싱 기반의 상품 랭킹에서, Redis 기반 집계 방식으로 전환
-- 트래픽 급증 상황에서도 빠른 랭킹 조회 성능 확보, 
+- 트래픽 급증 상황에서도 빠른 랭킹 조회 성능 확보 
 - 조회 조건: 오늘을 포함한 최근 3일 간 랭킹
 
 ### 기존 방식
@@ -29,9 +29,11 @@
 - 정합성 보장
   - Redis 업데이트는 트랜잭션 커밋 이후에만 수행 ← `차주 추가 구현, 일단 기능 수행`
   - ~~이벤트 트리거는 `AOP` `@PublishedOrder`로 표준화~~ ← 적절하지 않음
-    - `AOP`는 횡단 관심사(`cross-cutting concern`)를 모듈화 하는데 적합하며, 특정 기능을 타겟하는 `AOP`는 오히려 비즈니스 로직이 가려지고, 가독성이 떨어지게 됨.
+    > `AOP`는 횡단 관심사(`cross-cutting concern`)를 모듈화 하는데 적합하며,
+    > 특정 기능을 타겟하는 `AOP`는 오히려 비즈니스 로직이 가려지고, 가독성이 떨어지게 됨.
   - ~~`@TransactionalEventListener(AFTER_COMMIT)` 구간에서 `ZINCRBY` 호출~~
-    - 먼저 단순하게 Redis 자료구조를 활용해 보는 것으로 구현
+    > Redis 자료구조를 활용해 보는 것으로 구현
+    > 차주에 이벤트 발행 방식으로 변경
 - 중복 집계 방지
   - 멱등 키(`RANK:PROCESSED:{orderId}`)를 함께 발급함
 
@@ -73,8 +75,8 @@
 
 - 오늘자의 주문은 실제 Redis에 정보를 발행하는 OrderFacade를 통해 직접 호출
   - 오늘자 주문 생성 전 어제자까지의 집계 상태 확인
-  - 오늘자 주문 생성 후 **상품 5개**가 반환되는지 확인
-  - 오늘 가장 주문을 많이 생성한 **1번 상품이** 3일 전체에서 **1번인지** 확인
+  - 오늘자 주문 생성 후 **상품 5개**가 반환되는 지 확인
+  - 오늘 가장 주문을 많이 생성한 **1번 상품이** 3일 전체에서 **1위인 지** 확인
   ```java
   @Test
   @DisplayName("최근 3일 간 누적 집계를 통해 Top5 상품을 Redis 집계 정보를 기반으로 조회한다")
@@ -99,7 +101,7 @@
   ```
   - `place`함수: `OrderFacade`에 주문을 생성하는 헬프 함수
   - `record`함수: `TopProductRedisService`에 직접 기록하는 함수(오늘 이전 데이터 세팅)
-  - `printRanking`함수: 테스트 진행 간 집계 결과 출력용 함수
+  - `printRanking`함수: 테스트 진행 간 집계 결과 출력용 함수(추가)
  
 ### 실패 테스트 작성 결과
  
@@ -115,7 +117,7 @@
 - [TopProductRedisService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/analytics/application/TopProductRedisService.java)
 - 주문이 발생할 때 Redis에 반영하기 위한 `TopProductRedisService` 구현
   - 기존 DB 쿼리 기반인 `TopProductQueryService`와 분리하여 구현했습니다.
-  - `OrderFacade`에서 사용하는 계층으로 위치시켰습니다.
+  - `OrderFacade`에서 사용하는 계층으로 기존 `analytics/application`에 위치시켰습니다.
 
 - 전체 코드(주요 로직)
   ```java
@@ -202,7 +204,7 @@
 - [OrderFacade.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/order/facade/OrderFacade.java) 수정
   - 주문 생성 이후 (트랜젝션 내에서) redis에 비동기 적으로 저장하도록 요청 
     - 기존에 repository에 주문을 저장하면서 return 하는 부분은 order로 담아두고,
-    - items 배열에서 ProductId와 quantity만 사용하여 topProductRedisService에 비동기로 요청합니다.    
+    - items 배열에서 ProductId와 quantity만 사용하여 `topProductRedisService`에 비동기로 요청합니다.    
     ```java
     @Transactional
     @DistributedLock(prefix = LockKey.PRODUCT, ids = "#orderItems.![productId]")
@@ -229,14 +231,22 @@
     - `@Async` 어노테이션을 사용하기 위해 OrderFacade 외부에 선언 필요
     - 배열을 받아서 `Redis`에 저장하되, 저장 시마다 `try {} catch (ignored){}` 로 에러가 반환되지 않도록 구현
     ```java
-    @Async
-    public void recordOrdersAsync(List<TopProductRankingDto> items) {
-        for (TopProductRankingDto item : items) {
-            try {
-                recordOrder(item.productId(), (int) item.soldQty());
-            } catch (Exception ignored) {
+    @Service
+    @RequiredArgsConstructor
+    public class TopProductRedisService {
+        /* ... */
+    
+        @Async
+        public void recordOrdersAsync(List<TopProductRankingDto> items) {
+            for (TopProductRankingDto item : items) {
+                try {
+                    recordOrder(item.productId(), (int) item.soldQty());
+                } catch (Exception ignored) {
+                }
             }
         }
+    
+        /* ... */
     }
     ```
   
@@ -244,8 +254,8 @@
 
 ![성공](./assets/003-ranking-place-order-success.png)
 
-- 처음 의도한 대로, 세팅은 4개 상품만 노출되며,
-- 오늘자 주문이 모두 추가된 뒤에는 1번 상품이 포함되고, 1번으로 표기가 됨
+- 처음 의도한 대로, 세팅 직후에는 4개 상품만 노출되며
+- 오늘자 주문이 모두 추가된 뒤에는 **1번 상품이 포함**되고, **1위로 집계** 됨
 - 나머지 주문들도 오늘자 수량이 정상적으로 합산되는 것 확인
 
 ## 추후계획
@@ -256,5 +266,5 @@
 ## 회고
 
 - 이제 설계 > 테스트 코드 작성 > 컴파일만 성공 구현 > 기능 구현 순으로 개발하는 것에 익숙해진 것 같습니다.
-- `TopProductRedisService`에서 활용하는 `TopProductRankingDto`는 `domain`에서 가져다 사용하는 DTO가 아니어서 application에 같이 배치했는데, 아직 DTO를 어디에 둬야 할 지 헷갈립니다. 
-- 과제 끝내고 다시한번 레이어드에서 DTO 어디에 두는 지 복습하는 시간을 갖겠습니다..
+- `TopProductRedisService`에서 활용하는 `TopProductRankingDto`는 `domain`에서 가져다 사용하는 DTO가 아니어서 `anlaytic/application`에 함께 배치했는데, 아직 DTO를 어디에 둬야 할 지 헷갈립니다. 
+- 일관된 구조를 위해 하나의 기능에서만 쓰이면 그 파일과 함께 배치하고, 재사용되는 것들만 `dto` 디렉토리를 만들어 사용하고 있습니다. 과제 끝내고 다시 한 번 레이어드에서 DTO 어디에 두는 지 복습하는 시간을 갖겠습니다..
