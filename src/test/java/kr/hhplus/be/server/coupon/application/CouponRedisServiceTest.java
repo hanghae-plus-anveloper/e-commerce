@@ -85,22 +85,36 @@ public class CouponRedisServiceTest {
         AtomicInteger acceptedCount = new AtomicInteger();
         AtomicInteger rejectedCount = new AtomicInteger();
 
-        for (User user : users) {
-            executor.submit(() -> {
-                try {
-                    start.await();
-                    boolean result = couponRedisService.tryIssue(user.getId(), policy.getId());
-                    if (result) {
-                        acceptedCount.incrementAndGet();
-                    } else {
+        int batchSize = 200; // 200명씩 10번 나눠서 동시 요청
+        for (int i = 0; i < users.size(); i += batchSize) {
+            List<User> batch = users.subList(i, Math.min(i + batchSize, users.size()));
+
+            CountDownLatch startLatch = new CountDownLatch(1);
+            CountDownLatch doneLatch = new CountDownLatch(batch.size());
+
+            for (User user : batch) {
+                executor.submit(() -> {
+                    try {
+                        startLatch.await(); // 동시에 시작
+                        boolean result = couponRedisService.tryIssue(user.getId(), policy.getId());
+                        if (result) {
+                            acceptedCount.incrementAndGet();
+                        } else {
+                            rejectedCount.incrementAndGet();
+                        }
+                    } catch (Exception e) {
                         rejectedCount.incrementAndGet();
+                    } finally {
+                        doneLatch.countDown();
                     }
-                } catch (Exception e) {
-                    rejectedCount.incrementAndGet();
-                } finally {
-                    done.countDown();
-                }
-            });
+                });
+            }
+
+            // 배치 시작
+            startLatch.countDown();
+            doneLatch.await(5, TimeUnit.SECONDS);
+
+            System.out.println("그룹\t" + (i / batchSize + 1) + "\t완료");
         }
 
 
@@ -113,10 +127,10 @@ public class CouponRedisServiceTest {
 
 
         couponWorker.processPending(policy.getId());
+        TimeUnit.SECONDS.sleep(1);
 
         long dbCount = couponRepository.count();
         System.out.println("DB 저장된 쿠폰 수: " + dbCount);
-
 
         assertThat(acceptedCount.get()).isEqualTo(availableCount);
         assertThat(dbCount).isEqualTo(availableCount);

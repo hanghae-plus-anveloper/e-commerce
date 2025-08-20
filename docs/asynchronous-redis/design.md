@@ -110,6 +110,84 @@ sequenceDiagram
 - policyId 별로 redis에서 PEDING 상태의 선착순 목록을 batch 사이즈(500) 만큼 가져와서 
 - CouponService.issueCoupon 으로 쿠폰 발급
 - 성공 시 ZSET에서 제거, ISSUED SET에 기록(중복 발급 여부 정책에 따라)
+- 배치가 끝나면 발급된 수량을 Redis에 갱신(임시 차감과 실제 DB 값 동기화)
 
 ## 통합 테스트
+
+### 통합 테스트 목적
+
+- 동시 다발적인 요청에도 Redis에 의해 남은 수량만큼만 `PENDING`에 포함되는 지 확인한다.
+- 비동기 발급 확정 검증을 위해 worker 실행 이후에 DB의 반영과 `ISSUED`로의 이동을 확인한다. 
+
+
+### 조건
+
+- [CouponRedisServiceTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/coupon/application/CouponRedisServiceTest.java)
+- 1000개가 가용한 쿠폰에 대하여 사용자 요청은 2000개 수행
+- 사용자 요청은 200개씩 10번 동시요청으로 수행(ms 값 중복 발생 테스트용)
+  - 워커는 500개씩 처리시켜볼 예정이고, ms + 랜덤숫자는 3자리 숫자 001~999까지 부여할 예정입니다.
+
+- 주요 코드
+
+  ```java
+  @Test
+  @DisplayName("잔여수량이 1000개 쿠폰 정책에 대해 2000명이 동시에 발급 요청 시 Redis 응답 카운트와 DB 저장 결과를 검증한다")
+  void issueCoupon_concurrently_redis() throws InterruptedException {
+      /* ... */
+  
+      int batchSize = 200; // 200명씩 10번 나눠서 동시 요청
+      for (int i = 0; i < users.size(); i += batchSize) {
+          List<User> batch = users.subList(i, Math.min(i + batchSize, users.size()));
+  
+          CountDownLatch startLatch = new CountDownLatch(1);
+          CountDownLatch doneLatch = new CountDownLatch(batch.size());
+  
+          for (User user : batch) {
+              executor.submit(() -> {
+                  try {
+                      startLatch.await(); // 동시에 시작
+                      boolean result = couponRedisService.tryIssue(user.getId(), policy.getId());
+                      if (result) {
+                          acceptedCount.incrementAndGet();
+                      } else {
+                          rejectedCount.incrementAndGet();
+                      }
+                  } catch (Exception e) {
+                      rejectedCount.incrementAndGet();
+                  } finally {
+                      doneLatch.countDown();
+                  }
+              });
+          }
+  
+          // 배치 시작
+          startLatch.countDown();
+          doneLatch.await(5, TimeUnit.SECONDS);
+  
+          System.out.println("그룹\t" + (i / batchSize + 1) + "\t완료");
+      }
+  
+  
+      start.countDown();
+      done.await(10, TimeUnit.SECONDS);
+      executor.shutdownNow();
+  
+      System.out.println("Redis 수락된 요청 수: " + acceptedCount.get());
+      System.out.println("Redis 거절된 요청 수: " + rejectedCount.get());
+  
+      couponWorker.processPending(policy.getId());
+      TimeUnit.SECONDS.sleep(1);
+  
+      long dbCount = couponRepository.count();
+      System.out.println("DB 저장된 쿠폰 수: " + dbCount);
+  
+      assertThat(acceptedCount.get()).isEqualTo(availableCount);
+      assertThat(dbCount).isEqualTo(availableCount);
+  }
+  ```
+
+### 통합 테스트 실패 결과
+
+![실패 - 컴파일만 성공](./assets/001-issue-coupon-fail.png)
+- 동시요청 확인, 요청 결과 false 값 고정으로 컴파일만 되도록 구현
 
