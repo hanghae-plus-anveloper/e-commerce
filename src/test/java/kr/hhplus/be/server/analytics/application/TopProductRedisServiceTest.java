@@ -82,6 +82,7 @@ public class TopProductRedisServiceTest {
 
         List<TopProductRankingDto> before = topProductRedisService.getTop5InLast3Days();
         printRanking("오늘자 주문 발생 전 집계", before);
+        assertThat(before).hasSize(4); // 6번 상품은 포함되지 않음 getTop5InLast3Days 검증
 
         // 오늘 자 주문 생성, 생성 시 Redis에 추가 되는 지, 집계 결과에 합산 되는 지 확인
         IntStream.rangeClosed(1, 5).forEach(i -> place(p1, 10)); // 오늘, 5회 * 10개 = 50개 TOP 1

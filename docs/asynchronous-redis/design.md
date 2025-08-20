@@ -20,25 +20,29 @@
 - 남은 수량 관리
   - key: `COUPON:POLICY:{policyId}:REMAINING`
   - 자료구조: `String` 에 최초 발급 수량 저장
-    - `DECR`로 원자적 차감
-    - `expire` 설정
-      - `CouponPolicy`의 `endedAt`로 설정
-      - 발급 후에 차감되는 값이며, DB의 정보로 갱신
+    - `DECR`로 원자적 차감, 0 미만 시 마감 처리
+  - `TTL`: `CouponPolicy.endedAt` 기준으로 `expire` 설정 → 이벤트 종료 시 자동 정리
 
 - 선착순 관리
   - key: `COUPON:POLICY:{policyId}:PENDING`
   - 자료구조: `ZSET`(`userId`, `timestamp`)
     - Redis 선착순 통과 직후 사용자를 넣음
-    - score: 요청 시간 저장 → "누가 몇 번째로 도착했는지" 순서 관리 가능
-      - `ms`까지 동일한 경우를 대비해서, `ms + 랜덤 숫자`
-        - ms까지 동일한데, 1장 남았을 경우가 과연 많을까 고민하였지만,  
+    - score: 요청 시간(ms + 랜덤숫자) 저장 → "누가 몇 번째로 도착했는지" 순서 관리 가능
+      - `ms`까지 동일한 경우를 대비해서, `ms + 랜덤 숫자`를 지정해야할까? 어느정도 중복이 되나 
+      - ms까지 동일한데, 1장 남았을 경우가 과연 많을까 고민하였지만, 설계는 중복되지 않는 것을 목표로 작성했습니다.
     - consumer가 DB 반영 후 ISSUED로 이동.
+  - `TTL`
+    - `CouponPolicy.endedAt` 이후 자동 삭제(기본)
+    - `Worker`가 주기적(10초 미만)으로 `poll` → DB 반영 완료 후 `ISSUED`로 이동
+    - (질문): PENDING에 있는 값도 쿠폰 정책 종료 일자로 만료를 지정하는 것과 워커 실행 주기보다만 길게 가져가는 것에 대해 고민했습니다.
+      - 워커에서 100~1000개씩 처리를 한다고 하더라도, 
 
 - 발급 확정
   - key: `COUPON:POLICY:{policyId}:ISSUED`
   - 자료구조: `SET`(`userId`)
     - DB 반영 완료된 사용자
     - 중복 요청 차단 및 발급 최종 이력 확인용
+  - `TTL`: `CouponPolicy.endedAt` 기준으로 `expire` 설정
 
 ### 서비스 계층 개선
 
@@ -95,6 +99,17 @@ sequenceDiagram
   Worker->>(Redis): 발급완료 처리(ISSUED SET)
 
 ```
+
+### Worker 설계
+
+- 기존 발급 역할을 위임 받은 CouponFacade의 동작을 대신 처리함
+- 10초 미만의 시간 단위로 동작
+  - 너무 길어지면 사용자에게 장시간 발급되지 않은 상태를 노출
+  - 테스트 코드로 발급 쿼리 시간을 확인하여 설정 → 
+- 현재 유효한 CouponPolicy ID 목록을 조회함
+- policyId 별로 redis에서 PEDING 상태의 선착순 목록을 batch 사이즈(500) 만큼 가져와서 
+- CouponService.issueCoupon 으로 쿠폰 발급
+- 성공 시 ZSET에서 제거, ISSUED SET에 기록(중복 발급 여부 정책에 따라)
 
 ## 통합 테스트
 
