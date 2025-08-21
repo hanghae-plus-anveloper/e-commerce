@@ -117,7 +117,7 @@ sequenceDiagram
 ### 통합 테스트 목적
 
 - 동시 다발적인 요청에도 Redis에 의해 남은 수량만큼만 `PENDING`에 포함되는 지 확인한다.
-- 비동기 발급 확정 검증을 위해 worker 실행 이후에 DB의 반영과 `ISSUED`로의 이동을 확인한다. 
+- 비동기 발급 확정 검증을 위해 Worker 실행 이후에 DB의 반영을 확인한다. 
 
 
 ### 조건
@@ -302,30 +302,30 @@ sequenceDiagram
     - `getAllPolicyIds()`
       - 현재 Redis에 등록된 모든 쿠폰 정책 ID 목록을 조회
       - Worker가 실행될 때, 어떤 정책을 처리해야 하는지 확인하는 용도로 사용됩니다.
-      - `setRemainingCount(Long policyId, int remainingCount)`
-        - 특정 정책의 남은 수량을 Redis에 초기화하거나 갱신
-        - 이벤트 시작 시 `CouponPolicy` 엔티티의 수량을 Redis에 반영합니다.
-        - 느슨한 요청 중에는 정해진 시간(10초) 마다 DB와 동기화 하는 역할도 수행합니다. 
-      - `removePolicy(Long policyId)`
-        - 정책 종료 시 관련된 모든 Redis Key(`REMAINING`, `PENDING`, `ISSUED`)를 삭제
-        - 불필요한 Key를 정리하여 메모리 사용을 방지합니다.
-      - `peekPending(Long policyId, int limit)`
-        - PENDING ZSET에서 선착순으로 사용자 ID를 조회
-        - `redisTemplate.opsForZSet().rangeWithScores()`을 사용하여 **정해진 수량(`limit`)** 만큼 순서대로 꺼냅니다.
-        - Worker가 DB 반영을 위해 호출합니다.
-      - `removePending(Long policyId, List<Long> userIds)`
-        - 발급에 성공한 id만 `Redis`에서 제거 
-      - `tryIssue(Long userId, Long policyId)`
-        - 사용자가 쿠폰 발급을 시도할 때 호출되는 메서드입니다.
-        - 먼저 `REMAINING` 키를 `DECR`하여 수량을 줄이고,
-          - 남은 수량이 없으면 실패를 반환
-          - 남은 수량이 있으면 `PENDING` ZSET에 사용자 ID와 score를 저장
-        - 즉시 응답으로 성공/실패 여부를 반환할 수 있어 API의 응답 속도를 보장합니다.
-      - `getRandScore()` (private)
-        - PENDING ZSET에 저장될 score를 생성
-        - `System.currentTimeMillis()`와 3자리 랜덤값을 조합하여 **밀리초 단위 요청 충돌을 방지**합니다.
-      - `clearAll()`
-        - 테스트나 초기화 시 모든 쿠폰 정책 관련 Redis Key를 정리합니다.
+    - `setRemainingCount(Long policyId, int remainingCount)`
+      - 특정 정책의 남은 수량을 Redis에 초기화하거나 갱신
+      - 이벤트 시작 시 `CouponPolicy` 엔티티의 수량을 Redis에 반영합니다.
+      - 느슨한 요청 중에는 정해진 시간(10초) 마다 DB와 동기화 하는 역할도 수행합니다. 
+    - `removePolicy(Long policyId)`
+      - 정책 종료 시 관련된 모든 Redis Key(`REMAINING`, `PENDING`, `ISSUED`)를 삭제
+      - 불필요한 Key를 정리하여 메모리 사용을 방지합니다.
+    - `peekPending(Long policyId, int limit)`
+      - PENDING ZSET에서 선착순으로 사용자 ID를 조회
+      - `redisTemplate.opsForZSet().rangeWithScores()`을 사용하여 **정해진 수량(`limit`)** 만큼 순서대로 꺼냅니다.
+      - Worker가 DB 반영을 위해 호출합니다.
+    - `removePending(Long policyId, List<Long> userIds)`
+      - 발급에 성공한 id만 `Redis`에서 제거 
+    - `tryIssue(Long userId, Long policyId)`
+      - 사용자가 쿠폰 발급을 시도할 때 호출되는 메서드입니다.
+      - 먼저 `REMAINING` 키를 `DECR`하여 수량을 줄이고,
+        - 남은 수량이 없으면 실패를 반환
+        - 남은 수량이 있으면 `PENDING` ZSET에 사용자 ID와 score를 저장
+      - 즉시 응답으로 성공/실패 여부를 반환할 수 있어 API의 응답 속도를 보장합니다.
+    - `getRandScore()` (private)
+      - PENDING ZSET에 저장될 score를 생성
+      - `System.currentTimeMillis()`와 3자리 랜덤값을 조합하여 **밀리초 단위 요청 충돌을 방지**합니다.
+    - `clearAll()`
+      - 테스트나 초기화 시 모든 쿠폰 정책 관련 Redis Key를 정리합니다.
 
 - [CouponWorker.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponWorker.java)
   - Redis에 쌓인 대기열(PENDING) 을 주기적으로 처리하여 DB에 발급을 확정하는 역할을 수행
