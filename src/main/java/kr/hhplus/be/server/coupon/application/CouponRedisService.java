@@ -6,9 +6,9 @@ import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,19 +35,24 @@ public class CouponRedisService {
         redisTemplate.delete(CouponRedisKey.issuedKey(policyId));
     }
 
-    public List<Long> popPending(Long policyId, int limit) {
-        String pendingKey = CouponRedisKey.pendingKey(policyId);
+    public List<Long> peekPending(Long policyId, int count) {
+        String key = CouponRedisKey.pendingKey(policyId);
         Set<ZSetOperations.TypedTuple<String>> tuples =
-                redisTemplate.opsForZSet().popMin(pendingKey, limit);
+                redisTemplate.opsForZSet().rangeWithScores(key, 0, count - 1);
 
-        if (tuples == null || tuples.isEmpty()) {
-            return List.of();
-        }
+        if (tuples == null) return List.of();
+
         return tuples.stream()
                 .map(ZSetOperations.TypedTuple::getValue)
-                .filter(Objects::nonNull)
-                .map(Long::parseLong)
-                .toList();
+                .map(Long::valueOf)
+                .collect(Collectors.toList());
+    }
+
+    public void removePending(Long policyId, List<Long> userIds) {
+        if (userIds.isEmpty()) return;
+        String key = CouponRedisKey.pendingKey(policyId);
+        redisTemplate.opsForZSet()
+                .remove(key, userIds.stream().map(String::valueOf).toArray());
     }
 
     public boolean tryIssue(Long userId, Long policyId) {

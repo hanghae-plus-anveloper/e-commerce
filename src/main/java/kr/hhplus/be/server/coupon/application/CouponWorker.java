@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -46,17 +47,21 @@ public class CouponWorker {
 
         for (Long policyId : policyIds) {
             while (true) {
-                List<Long> userIds = couponRedisService.popPending(policyId, 500);
-                if (userIds.isEmpty()) {
-                    break; // 더 이상 없으면 종료
-                }
+                List<Long> userIds = couponRedisService.peekPending(policyId, 500);
+
+                if (userIds.isEmpty()) break;
+
+                List<Long> succeeded = new ArrayList<>();
 
                 for (Long userId : userIds) {
                     try {
                         couponService.issueCoupon(userId, policyId);
+                        succeeded.add(userId);
                     } catch (Exception ignored) {
                     }
                 }
+
+                couponRedisService.removePending(policyId, succeeded);
             }
         }
     }
