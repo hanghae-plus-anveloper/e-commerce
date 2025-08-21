@@ -76,7 +76,12 @@ public class CouponRedisServiceTest {
                         .endedAt(LocalDateTime.now().plusDays(10))
                         .build());
 
-        couponWorker.syncActivePolicies();
+//        couponWorker.syncActivePolicies();
+        TimeUnit.SECONDS.sleep(12); // Worker 정책 10초 마다 동기화
+
+        List<Long> policyIdsInRedis = couponRedisService.getAllPolicyIds();
+        System.out.println("Redis 정책 목록: " + policyIdsInRedis);
+        assertThat(policyIdsInRedis).contains(policy.getId());
 
         List<User> users = userRepository.findAll();
 
@@ -128,8 +133,8 @@ public class CouponRedisServiceTest {
         System.out.println("Redis 거절된 요청 수: " + rejectedCount.get());
 
 
-        couponWorker.processAllPending();
-        TimeUnit.SECONDS.sleep(5);
+//        couponWorker.processAllPending();
+        TimeUnit.SECONDS.sleep(3); // Worker process(limit 500) 1초 마다, 1000건 2초 이상.
 
         long dbCount = couponRepository.count();
         System.out.println("DB 저장된 쿠폰 수: " + dbCount);
