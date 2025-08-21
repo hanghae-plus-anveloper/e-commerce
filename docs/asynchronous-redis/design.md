@@ -191,3 +191,315 @@ sequenceDiagram
 ![실패 - 컴파일만 성공](./assets/001-issue-coupon-fail.png)
 - 동시요청 확인, 요청 결과 false 값 고정으로 컴파일만 되도록 구현
 
+
+## Redis 기반 비동기 기능 구현
+
+### 클래스 별 기는 상세
+
+- [CouponRedisKey.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponRedisKey.java)
+  - Key를 일관성 있게 관리하기 위한 유틸리티 클래스
+  - 쿠폰 정책별로 남은 수량(REMAINING), 대기열(PENDING), 발급 완료(ISSUED) 키를 생성
+    ```java
+    public class CouponRedisKey {
+        public static String remainingKey(Long policyId) {
+            return "COUPON:POLICY:" + policyId + ":REMAINING";
+        }
+        public static String pendingKey(Long policyId) {
+            return "COUPON:POLICY:" + policyId + ":PENDING";
+        }
+        public static String issuedKey(Long policyId) {
+            return "COUPON:POLICY:" + policyId + ":ISSUED";
+        }
+    }
+    ```
+    - `remainingKey(Long policyId)`
+      - 해당 정책의 남은 수량을 관리하는 Key를 생성합니다.
+      - Redis의 String 구조를 사용해 수량을 차감(DECR)할 때 사용됩니다.
+    - `pendingKey(Long policyId)`
+      - 해당 정책에서 발급 대기(PENDING) 사용자 목록을 저장하는 Key를 생성합니다.
+      - Redis의 ZSET 구조를 활용해, score를 시간 기반(+ 랜덤숫자 세자리 000 ~ 999 연결)으로 지정하여 순서를 보장합니다.
+    - `issuedKey(Long policyId)`
+      - 최종적으로 발급 확정된 사용자를 관리하는 Key를 생성합니다.
+      - Redis의 SET 구조를 사용하며, 중복 발급 차단과 이력 관리에 활용됩니다.
+
+
+- [CouponRedisService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponRedisService.java)
+  - 쿠폰 발급 요청이 Redis를 통해 처리될 수 있도록 지원하는 서비스 계층
+    - 기존 `CouponFacade`에서의 요청을 처리하던 CouponService(DB) 대신에 발급 성공/실패 여부를 미리 반환합니다.   
+  - 발급 요청을 Redis에 기록하고, Worker가 처리할 수 있도록 데이터를 관리하는 역할을 수행
+- 전체 코드 
+    ```java
+    @Service
+    @RequiredArgsConstructor
+    public class CouponRedisService {
+      
+      private final StringRedisTemplate redisTemplate;
+      
+      public List<Long> getAllPolicyIds() {
+        Set<String> keys = redisTemplate.keys("COUPON:POLICY:*:REMAINING");
+        return keys.stream()
+                .map(key -> key.split(":")[2])
+                .map(Long::parseLong)
+                .toList();
+      }
+      
+      public void setRemainingCount(Long policyId, int remainingCount) {
+        String remainingKey = CouponRedisKey.remainingKey(policyId);
+        redisTemplate.opsForValue().set(remainingKey, String.valueOf(remainingCount));
+      }
+      
+      public void removePolicy(Long policyId) {
+        redisTemplate.delete(CouponRedisKey.remainingKey(policyId));
+        redisTemplate.delete(CouponRedisKey.pendingKey(policyId));
+        redisTemplate.delete(CouponRedisKey.issuedKey(policyId));
+      }
+      
+      public List<Long> peekPending(Long policyId, int count) {
+        String key = CouponRedisKey.pendingKey(policyId);
+        Set<ZSetOperations.TypedTuple<String>> tuples =
+                redisTemplate.opsForZSet().rangeWithScores(key, 0, count - 1);
+      
+        if (tuples == null) return List.of();
+      
+        return tuples.stream()
+                .map(ZSetOperations.TypedTuple::getValue)
+                .map(Long::valueOf)
+                .collect(Collectors.toList());
+      }
+      
+      public void removePending(Long policyId, List<Long> userIds) {
+        if (userIds.isEmpty()) return;
+        String key = CouponRedisKey.pendingKey(policyId);
+        redisTemplate.opsForZSet()
+                .remove(key, userIds.stream().map(String::valueOf).toArray());
+      }
+      
+      public boolean tryIssue(Long userId, Long policyId) {
+        String remainingKey = CouponRedisKey.remainingKey(policyId);
+        String pendingKey = CouponRedisKey.pendingKey(policyId);
+      
+        Long remaining = redisTemplate.opsForValue().decrement(remainingKey);
+        if (remaining == null || remaining < 0) {
+          return false;
+        }
+      
+        redisTemplate.opsForZSet().add(pendingKey, userId.toString(), getRandScore());
+      
+        return true;
+      }
+      
+      private long getRandScore () {
+        int rand = ThreadLocalRandom.current().nextInt(0, 1000);
+        String randStr = String.format("%03d", rand); // "001" ~ "999"
+        return  Long.parseLong(System.currentTimeMillis() + randStr);
+      }
+      
+      public void clearAll() {
+        redisTemplate.delete(redisTemplate.keys("COUPON:POLICY:*"));
+      }
+    }
+    ```
+    - `getAllPolicyIds()`
+      - 현재 Redis에 등록된 모든 쿠폰 정책 ID 목록을 조회
+      - Worker가 실행될 때, 어떤 정책을 처리해야 하는지 확인하는 용도로 사용됩니다.
+      - `setRemainingCount(Long policyId, int remainingCount)`
+        - 특정 정책의 남은 수량을 Redis에 초기화하거나 갱신
+        - 이벤트 시작 시 `CouponPolicy` 엔티티의 수량을 Redis에 반영합니다.
+        - 느슨한 요청 중에는 정해진 시간(10초) 마다 DB와 동기화 하는 역할도 수행합니다. 
+      - `removePolicy(Long policyId)`
+        - 정책 종료 시 관련된 모든 Redis Key(`REMAINING`, `PENDING`, `ISSUED`)를 삭제
+        - 불필요한 Key를 정리하여 메모리 사용을 방지합니다.
+      - `peekPending(Long policyId, int limit)`
+        - PENDING ZSET에서 선착순으로 사용자 ID를 조회
+        - `redisTemplate.opsForZSet().rangeWithScores()`을 사용하여 **정해진 수량(`limit`)** 만큼 순서대로 꺼냅니다.
+        - Worker가 DB 반영을 위해 호출합니다.
+      - `removePending(Long policyId, List<Long> userIds)`
+        - 발급에 성공한 id만 `Redis`에서 제거 
+      - `tryIssue(Long userId, Long policyId)`
+        - 사용자가 쿠폰 발급을 시도할 때 호출되는 메서드입니다.
+        - 먼저 `REMAINING` 키를 `DECR`하여 수량을 줄이고,
+          - 남은 수량이 없으면 실패를 반환
+          - 남은 수량이 있으면 `PENDING` ZSET에 사용자 ID와 score를 저장
+        - 즉시 응답으로 성공/실패 여부를 반환할 수 있어 API의 응답 속도를 보장합니다.
+      - `getRandScore()` (private)
+        - PENDING ZSET에 저장될 score를 생성
+        - `System.currentTimeMillis()`와 3자리 랜덤값을 조합하여 **밀리초 단위 요청 충돌을 방지**합니다.
+      - `clearAll()`
+        - 테스트나 초기화 시 모든 쿠폰 정책 관련 Redis Key를 정리합니다.
+
+- [CouponWorker.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponWorker.java)
+  - Redis에 쌓인 대기열(PENDING) 을 주기적으로 처리하여 DB에 발급을 확정하는 역할을 수행
+  - DB를 주기적으로 조회하여 현재 유효한 정책 목록으로 Redis의 정책-남은 수량을 업데이트
+  - Redis를 주기적으로 조회하여 PENDING 상태의 쿠폰 발급 요청을 특정 수만큼 가져와 순차적으로 쿠폰 발급
+    - 쿠폰 발급 시 issueCoupon(User, PolicyId)에서 issueCoupon(UserId, PolicyId) 로 발급 할 수 있도록 JPA 일부 수정 
+  - 전체 코드
+    ```java
+    @Component
+    @RequiredArgsConstructor
+    public class CouponWorker {
+    
+      private final CouponService couponService;
+      private final CouponRedisService couponRedisService;
+    
+      @Scheduled(fixedDelay = 10_000) // 10초마다 실행
+      public void syncActivePolicies() {
+        List<CouponPolicy> activePolicies = couponService.getActivePolicies();
+    
+        // 현재 DB에 유효한 정책 ID
+        List<Long> activePolicyIds = activePolicies.stream()
+                .map(CouponPolicy::getId)
+                .toList();
+    
+        // redis 에 존재하는 정책 ID
+        List<Long> redisPolicyIds = couponRedisService.getAllPolicyIds();
+    
+        // redis 에만 존재하는 정책 제거
+        for (Long redisPolicyId : redisPolicyIds) {
+          if (!activePolicyIds.contains(redisPolicyId)) {
+            couponRedisService.removePolicy(redisPolicyId);
+          }
+        }
+    
+        // 유효한 정책은 Redis에 반영  + 남은 수량 포함
+        for (CouponPolicy policy : activePolicies) {
+          couponRedisService.setRemainingCount(policy.getId(), policy.getRemainingCount());
+        }
+      }
+    
+      @Scheduled(fixedDelay = 1000) // 1초마다 실행
+      public void processAllPending() {
+        List<Long> policyIds = couponRedisService.getAllPolicyIds();
+    
+        for (Long policyId : policyIds) {
+          while (true) {
+            List<Long> userIds = couponRedisService.peekPending(policyId, 500);
+    
+            if (userIds.isEmpty()) break;
+    
+            List<Long> succeeded = new ArrayList<>();
+    
+            for (Long userId : userIds) {
+              try {
+                couponService.issueCoupon(userId, policyId);
+                succeeded.add(userId);
+              } catch (Exception ignored) {
+              }
+            }
+    
+            couponRedisService.removePending(policyId, succeeded);
+          }
+        }
+      }
+    }
+    ```
+    - `syncActivePolicies()`
+      - DB에서 현재 유효한 정책을 조회 후 Redis와 동기화
+        - DB에는 유효하지 않고, `Redis`에만 남아있는 정책을 제거
+        - 남은 수량(`remainingCount`)을 `Redis`에 다시 세팅하여 DB 값과 `Redis` 값의 차이를 보정
+    - `processAllPending()`
+      - `Redis PENDING ZSET`에서 사용자 ID를 `batch(500)` 단위로 가져와 처리
+      - 각 사용자에 대해 `CouponService.issueCoupon`을 호출하여 DB에 발급 확정
+      - 처리된 요청은 `ZSET`에서 제거
+
+- [CouponService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponService.java) 기능 추가/변경
+  ```java
+  @Transactional(readOnly = true)
+  public List<CouponPolicy> getActivePolicies() {
+      return couponPolicyRepository.findAll()
+              .stream()
+              .filter(CouponPolicy::isWithinPeriod)
+              .toList();
+  }
+  @Transactional
+  public Coupon issueCoupon(Long userId, Long policyId) {
+    /* ... */
+  }
+  ```
+  - DB에서 유효한 정책 조회 함수 추가 
+  - issueCoupon 호출 시 User → UserId로 변경 
+  
+- [Coupon.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/domain/Coupon.java) 변경
+  - JPA 매핑 방식 변경
+    - Redis 에서 userId와 policyId 만으로 조회하기 용이하도록, 연관관계 매핑에서 FK 식별자로 직접 매핑으로 리팩토링
+  - 변경전
+    ```java
+      @ManyToOne(fetch = FetchType.LAZY, optional = false)
+      @JoinColumn(name = "user_id", nullable = false)
+      private User user;
+    ```
+  - 변경후
+    ```java
+      @Column(name = "user_id", nullable = false)
+      private Long userId;
+
+      @ManyToOne(fetch = FetchType.LAZY) 
+      @JoinColumn(name = "user_id", insertable = false, updatable = false)
+      private User user;
+    ```
+  - 관련된 테스트 build 코드 모두 수정완료
+
+### 구현 후 테스트 성공 결과 1
+
+![성공 - Redis 및 DB 결과 확인](./assets/002-issue-coupon-success.png)
+
+- 2000개의 요청 중 1000개만 성공, 1000개는 바로 거절로 반환완료됨
+- 이후 워커의 배치에 의해 DB에 1000개 반영이 완료되는 것 확인 완료
+- 다만 해당 테스트 결과는 Worker의 syncActivePolicies, processAllPending 를 직접 호출함
+
+### @EnableScheduling 추가 및 테스트 코드 수정
+
+- 수정된 테스트 코드
+  ```java
+  
+      @Test
+      @DisplayName("잔여수량이 1000개 쿠폰 정책에 대해 2000명이 동시에 발급 요청 시 Redis 응답 카운트와 DB 저장 결과를 검증한다")
+      void issueCoupon_concurrently_redis() throws InterruptedException {
+          /* ... */
+        
+          // couponWorker.syncActivePolicies();
+          TimeUnit.SECONDS.sleep(12); // Worker 정책 10초 마다 동기화
+        
+          List<Long> policyIdsInRedis = couponRedisService.getAllPolicyIds();
+          System.out.println("Redis 정책 목록: " + policyIdsInRedis);
+          assertThat(policyIdsInRedis).contains(policy.getId());
+          
+          
+          /* ... */
+  
+          // couponWorker.processAllPending();
+          TimeUnit.SECONDS.sleep(3); // Worker process(limit 500) 1초 마다, 1000건 2초 이상.
+        
+          /* ... */
+      }
+  ```
+  - `ServerApplication`에 `@EnableScheduling` 추가
+  - 테스트 코드 중 `Worker`에 등록된 시간만큼 대기
+  - `syncActivePolicies` 수동 요청없이 정책이 `Redis`에 들어있는 지 확인
+  - `processAllPending` 수동 요청없이 `Batch`로 인해 DB에 반영되는 지 확인
+
+### 테스트 코드 수정 후 성공 결과
+
+![성공 - 스케쥴에 의해 실행](./assets/003-issue-coupon-success.png)
+
+- 12초 대기(Worker가 10초 마다 실행) 후 정책 목록 조회 결과 1번 정책 확인 완료
+- 2000건의 요청에 대하여 1000건만큼만 수락되는 것 확인 완료
+- 요청이 모두 완료된 후 3초 대기(Worker가 1초마다 실행) 후 DB 저장 확인 완료
+  - 1초만 대기 시 1000건 미만으로 확인되어 테스트 실패
+  - ![실패4](./assets/004-issue-coupon-fail.png)
+  - ![실패5](./assets/005-issue-coupon-fail.png)
+
+
+## 추후계획
+
+- 현재는 Redis에 의한 승인/거절과 비동기적 DB 확정만 구현되어있고, 설계서에 작성했던 중복 예외처리를 위한 ISSUED는 아직 미구현 상태입니다.
+- 쿠폰 정책중에 중복이 허용되는 경우(예: 1000월 할인권 5매 증정)와 같은 비즈니스 정책에 따라 분기되어야 할것 같다는 생각이 들었습니다.
+
+## 회고
+
+- 기능들에 대한 정의는 빠르게 내릴 수 있는데, 그 기능을 어떤 계층에 넣을 지 아직 제 자신의 기준이 덜 확립된 것 같습니다.
+- 쿠폰 선착순 기능에 Redis를 추가하면서 Service 계층을 그대로 사용하기 위한 구성을 짜봤는데, 적절한 구성인 지 모르겠습니다.
+  - 기존: Controller → Facade → Service → Repository 
+  - 수정: Controller → Facade → RedisService → (Redis) ← Worker → Service(기존) → Repository
+
+
+
