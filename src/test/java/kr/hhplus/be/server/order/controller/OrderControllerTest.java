@@ -86,14 +86,15 @@ class OrderControllerTest {
                 .startedAt(LocalDateTime.now().minusMinutes(1))
                 .endedAt(LocalDateTime.now().plusHours(1))
                 .build());
-        Coupon coupon = new Coupon(
-                null,
-                policy,
-                user,
-                policy.getDiscountAmount(),
-                policy.getDiscountRate(),
-                false
-        );
+
+        Coupon coupon = Coupon.builder()
+                .userId(userId)
+                .user(user)
+                .policy(policy)
+                .discountAmount(policy.getDiscountAmount())
+                .discountRate(policy.getDiscountRate())
+                .used(false)
+                .build();
 
         couponId = couponRepository.save(coupon).getId();
     }

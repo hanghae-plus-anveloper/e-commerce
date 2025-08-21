@@ -6,7 +6,6 @@ import kr.hhplus.be.server.coupon.domain.CouponPolicyRepository;
 import kr.hhplus.be.server.coupon.domain.CouponRepository;
 import kr.hhplus.be.server.coupon.exception.CouponSoldOutException;
 import kr.hhplus.be.server.coupon.exception.InvalidCouponException;
-import kr.hhplus.be.server.user.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,7 +33,7 @@ class CouponServiceTest {
     @Test
     @DisplayName("쿠폰 발급 - 성공")
     void issueCoupon_success() {
-        User user = new User("테스트 사용자"); // id 없음
+        long userId = 1L; // id 없음
         CouponPolicy policy = CouponPolicy.builder()
                 .discountAmount(1000)
                 .availableCount(10)
@@ -45,24 +44,24 @@ class CouponServiceTest {
                 .build();
 
         when(couponPolicyRepository.findById(1L)).thenReturn(Optional.of(policy));
+        when(couponPolicyRepository.decreaseRemainingCount(1L)).thenReturn(1);
         when(couponRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Coupon coupon = couponService.issueCoupon(user, 1L);
+        Coupon coupon = couponService.issueCoupon(userId, 1L);
 
         assertThat(coupon).isNotNull();
-        assertThat(coupon.getUser()).isEqualTo(user);
+        assertThat(coupon.getUserId()).isEqualTo(userId);
         assertThat(coupon.getPolicy()).isEqualTo(policy);
         assertThat(coupon.isUsed()).isFalse();
     }
 
     @Test
     @DisplayName("쿠폰 발급 - 존재하지 않는 정책")
-    void issueCoupon_invalidPolicy() {
-        User user = new User("테스트 사용자");
+    void issueCoupon_invalidPolicy() {long userId = 1L;
 
         when(couponPolicyRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> couponService.issueCoupon(user, 999L))
+        assertThatThrownBy(() -> couponService.issueCoupon(userId, 999L))
                 .isInstanceOf(InvalidCouponException.class)
                 .hasMessageContaining("존재하지 않는 쿠폰 정책");
     }
@@ -70,7 +69,7 @@ class CouponServiceTest {
     @Test
     @DisplayName("쿠폰 발급 - 만료된 정책")
     void issueCoupon_expiredPolicy() {
-        User user = new User("테스트 사용자");
+        long userId = 1L;
 
         CouponPolicy expiredPolicy = CouponPolicy.builder()
                 .discountRate(0.1)
@@ -83,7 +82,7 @@ class CouponServiceTest {
 
         when(couponPolicyRepository.findById(2L)).thenReturn(Optional.of(expiredPolicy));
 
-        assertThatThrownBy(() -> couponService.issueCoupon(user, 2L))
+        assertThatThrownBy(() -> couponService.issueCoupon(userId, 2L))
                 .isInstanceOf(InvalidCouponException.class)
                 .hasMessageContaining("유효하지 않습니다");
     }
@@ -91,7 +90,7 @@ class CouponServiceTest {
     @Test
     @DisplayName("쿠폰 발급 - 수량 초과")
     void issueCoupon_soldOut() {
-        User user = new User("테스트 사용자");
+        long userId = 1L;
 
         CouponPolicy soldOutPolicy = CouponPolicy.builder()
                 .discountAmount(1000)
@@ -105,7 +104,7 @@ class CouponServiceTest {
 
         when(couponPolicyRepository.findById(3L)).thenReturn(Optional.of(soldOutPolicy));
 
-        assertThatThrownBy(() -> couponService.issueCoupon(user, 3L))
+        assertThatThrownBy(() -> couponService.issueCoupon(userId, 3L))
                 .isInstanceOf(CouponSoldOutException.class)
                 .hasMessageContaining("남은 쿠폰 수량이 없습니다");
     }

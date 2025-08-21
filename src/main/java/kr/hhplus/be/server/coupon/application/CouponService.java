@@ -6,7 +6,6 @@ import kr.hhplus.be.server.coupon.domain.CouponPolicyRepository;
 import kr.hhplus.be.server.coupon.domain.CouponRepository;
 import kr.hhplus.be.server.coupon.exception.CouponSoldOutException;
 import kr.hhplus.be.server.coupon.exception.InvalidCouponException;
-import kr.hhplus.be.server.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +20,7 @@ public class CouponService {
     private final CouponRepository couponRepository;
 
     @Transactional
-    public Coupon issueCoupon(User user, Long policyId) {
+    public Coupon issueCoupon(Long userId, Long policyId) {
         CouponPolicy policy = couponPolicyRepository.findById(policyId)
                 .orElseThrow(() -> new InvalidCouponException("존재하지 않는 쿠폰 정책입니다."));
 
@@ -38,7 +37,8 @@ public class CouponService {
 
         Coupon coupon = Coupon.builder()
                 .policy(policy)
-                .user(user)
+                .userId(userId)
+//                .user(user)
                 .discountAmount(policy.getDiscountAmount())
                 .discountRate(policy.getDiscountRate())
                 .used(false)

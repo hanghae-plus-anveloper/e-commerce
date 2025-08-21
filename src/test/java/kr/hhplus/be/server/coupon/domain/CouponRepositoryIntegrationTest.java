@@ -53,6 +53,7 @@ class CouponRepositoryIntegrationTest {
 
         couponRepository.save(Coupon.builder()
                 .policy(policy)
+                .userId(user.getId())
                 .user(user)
                 .discountAmount(3000)
                 .discountRate(0.0)

@@ -20,7 +20,7 @@ public class CouponFacade {
     @Transactional
     public Coupon issueCoupon(Long userId, Long policyId) {
         User user = userService.findById(userId);
-        return couponService.issueCoupon(user, policyId);
+        return couponService.issueCoupon(userId, policyId);
     }
 
     @Transactional

@@ -67,6 +67,7 @@ public class CouponServiceConcurrencyTest {
 
         Coupon issuedCoupon = couponRepository.save(Coupon.builder()
                 .policy(policy)
+                .userId(user.getId())
                 .user(user)
                 .discountAmount(policy.getDiscountAmount())
                 .discountRate(policy.getDiscountRate())
@@ -145,7 +146,7 @@ public class CouponServiceConcurrencyTest {
             executor.submit(() -> {
                 try {
                     start.await(); // 동시에 시작
-                    couponService.issueCoupon(user, policy.getId());
+                    couponService.issueCoupon(user.getId(), policy.getId());
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     failCount.incrementAndGet();

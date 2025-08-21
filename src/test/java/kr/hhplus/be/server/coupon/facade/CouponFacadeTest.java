@@ -53,7 +53,7 @@ class CouponFacadeTest {
         Long policyId = 10L;
 
         when(userService.findById(userId)).thenReturn(user);
-        when(couponService.issueCoupon(user, policyId)).thenReturn(coupon);
+        when(couponService.issueCoupon(user.getId(), policyId)).thenReturn(coupon);
 
         Coupon result = couponFacade.issueCoupon(userId, policyId);
 
@@ -62,7 +62,7 @@ class CouponFacadeTest {
         assertThat(result.getUser().getId()).isEqualTo(userId);
 
         verify(userService).findById(userId);
-        verify(couponService).issueCoupon(user, policyId);
+        verify(couponService).issueCoupon(user.getId(), policyId);
     }
 
     @Test

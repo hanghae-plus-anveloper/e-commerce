@@ -25,8 +25,11 @@ public class Coupon {
     @JoinColumn(name = "policy_id", nullable = false)
     private CouponPolicy policy;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
+    @ManyToOne(fetch = FetchType.LAZY) //
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
 
     private int discountAmount; // 정액 할인

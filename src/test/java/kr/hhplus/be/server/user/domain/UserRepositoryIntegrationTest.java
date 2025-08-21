@@ -87,8 +87,8 @@ class UserRepositoryIntegrationTest {
                         .build()
         );
 
-        Coupon c1 = Coupon.builder().user(user).policy(policy).discountAmount(1000).build();
-        Coupon c2 = Coupon.builder().user(user).policy(policy).discountAmount(2000).build();
+        Coupon c1 = Coupon.builder().userId(user.getId()).user(user).policy(policy).discountAmount(1000).build();
+        Coupon c2 = Coupon.builder().userId(user.getId()).user(user).policy(policy).discountAmount(2000).build();
 
         user.getCoupons().add(c1); // DataJpaTest에선 없이도 성공
         user.getCoupons().add(c2);
