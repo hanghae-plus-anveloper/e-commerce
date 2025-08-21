@@ -76,6 +76,8 @@ public class CouponRedisServiceTest {
                         .endedAt(LocalDateTime.now().plusDays(10))
                         .build());
 
+        couponWorker.syncActivePolicies();
+
         List<User> users = userRepository.findAll();
 
         ExecutorService executor = Executors.newFixedThreadPool(20);
@@ -119,15 +121,15 @@ public class CouponRedisServiceTest {
 
 
         start.countDown();
-        done.await(10, TimeUnit.SECONDS);
+        done.await(2, TimeUnit.SECONDS);
         executor.shutdownNow();
 
         System.out.println("Redis 수락된 요청 수: " + acceptedCount.get());
         System.out.println("Redis 거절된 요청 수: " + rejectedCount.get());
 
 
-        couponWorker.processPending(policy.getId());
-        TimeUnit.SECONDS.sleep(1);
+        couponWorker.processAllPending();
+        TimeUnit.SECONDS.sleep(5);
 
         long dbCount = couponRepository.count();
         System.out.println("DB 저장된 쿠폰 수: " + dbCount);
