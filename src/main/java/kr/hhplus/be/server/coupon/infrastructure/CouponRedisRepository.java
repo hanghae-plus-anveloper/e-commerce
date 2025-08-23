@@ -54,6 +54,10 @@ public class CouponRedisRepository {
                 .remove(CouponRedisKey.pendingKey(policyId), userIds.stream().map(String::valueOf).toArray());
     }
 
+    public void removePendingKey(Long policyId) {
+        redisTemplate.delete(CouponRedisKey.pendingKey(policyId));
+    }
+
     public boolean tryIssue(Long userId, Long policyId) {
         Long remaining = redisTemplate.opsForValue().decrement(CouponRedisKey.remainingKey(policyId));
         if (remaining == null || remaining < 0) {

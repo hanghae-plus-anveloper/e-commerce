@@ -105,4 +105,8 @@ public class CouponService {
     public void removePending(Long policyId, List<Long> userIds) {
         couponRedisRepository.removePending(policyId, userIds);
     }
+
+    public void removePendingKey(Long policyId) {
+        couponRedisRepository.removePendingKey(policyId);
+    }
 }

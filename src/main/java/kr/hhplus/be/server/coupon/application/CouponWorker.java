@@ -42,7 +42,12 @@ public class CouponWorker {
         for (Long policyId : policyIds) {
             while (true) {
                 List<Long> userIds = couponService.peekPending(policyId, 500);
-                if (userIds.isEmpty()) break;
+
+                // PENDING 수동 만료 전략
+                if (userIds.isEmpty()) {
+                    couponService.removePendingKey(policyId);
+                    break;
+                }
 
                 List<Long> succeeded = new ArrayList<>();
                 for (Long userId : userIds) {
