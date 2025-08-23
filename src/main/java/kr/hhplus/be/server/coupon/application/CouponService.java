@@ -6,6 +6,7 @@ import kr.hhplus.be.server.coupon.domain.CouponPolicyRepository;
 import kr.hhplus.be.server.coupon.domain.CouponRepository;
 import kr.hhplus.be.server.coupon.exception.CouponSoldOutException;
 import kr.hhplus.be.server.coupon.exception.InvalidCouponException;
+import kr.hhplus.be.server.coupon.infrastructure.CouponRedisRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ public class CouponService {
 
     private final CouponPolicyRepository couponPolicyRepository;
     private final CouponRepository couponRepository;
+    private final CouponRedisRepository couponRedisRepository;
 
     @Transactional(readOnly = true)
     public List<CouponPolicy> getActivePolicies() {
@@ -25,6 +27,10 @@ public class CouponService {
                 .stream()
                 .filter(CouponPolicy::isWithinPeriod)
                 .toList();
+    }
+
+    public boolean tryIssue(Long userId, Long policyId) {
+        return couponRedisRepository.tryIssue(userId, policyId);
     }
 
     @Transactional
@@ -72,13 +78,31 @@ public class CouponService {
     @Transactional
     public Coupon useCoupon(Long couponId, Long userId) {
         Coupon coupon = findValidCouponOrThrow(couponId, userId);
-        // coupon.use();
-
-        int updated = couponRepository.markCouponAsUsed(couponId, userId); // 조건부 update
+        int updated = couponRepository.markCouponAsUsed(couponId, userId);
         if (updated == 0) {
             throw new InvalidCouponException("이미 사용된 쿠폰이거나 유효하지 않습니다.");
         }
         return couponRepository.findByIdAndUserId(couponId, userId)
                 .orElseThrow(() -> new InvalidCouponException("쿠폰 조회 실패"));
+    }
+
+    public List<Long> getAllPolicyIdsInRedis() {
+        return couponRedisRepository.getAllPolicyIds();
+    }
+
+    public void setRemainingCount(Long policyId, int remainingCount) {
+        couponRedisRepository.setRemainingCount(policyId, remainingCount);
+    }
+
+    public void removePolicy(Long policyId) {
+        couponRedisRepository.removePolicy(policyId);
+    }
+
+    public List<Long> peekPending(Long policyId, int limit) {
+        return couponRedisRepository.peekPending(policyId, limit);
+    }
+
+    public void removePending(Long policyId, List<Long> userIds) {
+        couponRedisRepository.removePending(policyId, userIds);
     }
 }

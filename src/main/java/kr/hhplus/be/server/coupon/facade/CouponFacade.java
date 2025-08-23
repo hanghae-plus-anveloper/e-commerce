@@ -1,7 +1,5 @@
 package kr.hhplus.be.server.coupon.facade;
 
-
-import kr.hhplus.be.server.coupon.application.CouponRedisService;
 import kr.hhplus.be.server.coupon.application.CouponService;
 import kr.hhplus.be.server.coupon.domain.Coupon;
 import lombok.RequiredArgsConstructor;
@@ -15,11 +13,10 @@ import java.util.List;
 public class CouponFacade {
 
     private final CouponService couponService;
-    private final CouponRedisService couponRedisService;
 
     @Transactional
     public Boolean tryIssue(Long userId, Long policyId) {
-        return couponRedisService.tryIssue(userId, policyId);
+        return couponService.tryIssue(userId, policyId);
     }
 
     @Transactional
@@ -28,8 +25,8 @@ public class CouponFacade {
     }
 
     @Transactional
-    public Coupon useCoupon(Long userId, Long policyId) {
-        return couponService.useCoupon(policyId, userId);
+    public Coupon useCoupon(Long userId, Long couponId) {
+        return couponService.useCoupon(couponId, userId);
     }
 
     @Transactional(readOnly = true)
