@@ -6,6 +6,7 @@ import kr.hhplus.be.server.coupon.domain.CouponPolicyRepository;
 import kr.hhplus.be.server.coupon.domain.CouponRepository;
 import kr.hhplus.be.server.coupon.exception.CouponSoldOutException;
 import kr.hhplus.be.server.coupon.exception.InvalidCouponException;
+import kr.hhplus.be.server.coupon.infrastructure.CouponRedisRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,13 +22,14 @@ class CouponServiceTest {
 
     private CouponPolicyRepository couponPolicyRepository;
     private CouponRepository couponRepository;
+    private CouponRedisRepository couponRedisRepository;
     private CouponService couponService;
 
     @BeforeEach
     void setUp() {
         couponPolicyRepository = mock(CouponPolicyRepository.class);
         couponRepository = mock(CouponRepository.class);
-        couponService = new CouponService(couponPolicyRepository, couponRepository);
+        couponService = new CouponService(couponPolicyRepository, couponRepository, couponRedisRepository);
     }
 
     @Test
