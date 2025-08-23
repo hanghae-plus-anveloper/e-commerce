@@ -6,7 +6,6 @@ import kr.hhplus.be.server.coupon.domain.CouponPolicyRepository;
 import kr.hhplus.be.server.coupon.domain.CouponRepository;
 import kr.hhplus.be.server.coupon.exception.CouponSoldOutException;
 import kr.hhplus.be.server.coupon.exception.InvalidCouponException;
-import kr.hhplus.be.server.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,16 +19,22 @@ public class CouponService {
     private final CouponPolicyRepository couponPolicyRepository;
     private final CouponRepository couponRepository;
 
+    @Transactional(readOnly = true)
+    public List<CouponPolicy> getActivePolicies() {
+        return couponPolicyRepository.findAll()
+                .stream()
+                .filter(CouponPolicy::isWithinPeriod)
+                .toList();
+    }
+
     @Transactional
-    public Coupon issueCoupon(User user, Long policyId) {
+    public Coupon issueCoupon(Long userId, Long policyId) {
         CouponPolicy policy = couponPolicyRepository.findById(policyId)
                 .orElseThrow(() -> new InvalidCouponException("존재하지 않는 쿠폰 정책입니다."));
 
         if (!policy.isWithinPeriod()) {
             throw new InvalidCouponException("쿠폰 정책이 유효하지 않습니다.");
         }
-
-//        policy.decreaseRemainingCount(); // 도메인에서 감소
 
         int updated = couponPolicyRepository.decreaseRemainingCount(policyId);
         if (updated == 0) {
@@ -38,7 +43,7 @@ public class CouponService {
 
         Coupon coupon = Coupon.builder()
                 .policy(policy)
-                .user(user)
+                .userId(userId)
                 .discountAmount(policy.getDiscountAmount())
                 .discountRate(policy.getDiscountRate())
                 .used(false)

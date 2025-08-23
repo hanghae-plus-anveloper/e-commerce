@@ -85,7 +85,7 @@ public class OrderFacadeConcurrencyTest {
 
         // 사용자별 쿠폰 사용 추가
         userRepository.findAll().forEach(u -> {
-            Coupon c = couponService.issueCoupon(u, policy.getId());
+            Coupon c = couponService.issueCoupon(u.getId(), policy.getId());
             couponIdByUser.put(u.getId(), c.getId());
         });
     }

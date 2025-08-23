@@ -23,6 +23,7 @@ class CouponTest {
                 .build();
 
         Coupon coupon = Coupon.builder()
+                .userId(user.getId())
                 .user(user)
                 .policy(policy)
                 .used(false)
@@ -43,6 +44,7 @@ class CouponTest {
                 .build();
 
         Coupon coupon = Coupon.builder()
+                .userId(user.getId())
                 .user(user)
                 .policy(policy)
                 .used(true)
@@ -63,6 +65,7 @@ class CouponTest {
                 .build();
 
         Coupon coupon = Coupon.builder()
+                .userId(user.getId())
                 .user(user)
                 .policy(policy)
                 .used(false)
@@ -83,6 +86,7 @@ class CouponTest {
                 .build();
 
         Coupon coupon = Coupon.builder()
+                .userId(user.getId())
                 .user(user)
                 .policy(policy)
                 .used(false)
@@ -100,6 +104,7 @@ class CouponTest {
                 .build();
 
         Coupon usedCoupon = Coupon.builder()
+                .userId(user.getId())
                 .user(user)
                 .policy(expiredPolicy)
                 .used(true)

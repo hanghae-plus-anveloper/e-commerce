@@ -65,8 +65,8 @@ class UserRepositoryTest {
                         .build()
         );
 
-        Coupon c1 = Coupon.builder().user(user).policy(policy).discountAmount(1000).build();
-        Coupon c2 = Coupon.builder().user(user).policy(policy).discountAmount(2000).build();
+        Coupon c1 = Coupon.builder().userId(user.getId()).user(user).policy(policy).discountAmount(1000).build();
+        Coupon c2 = Coupon.builder().userId(user.getId()).user(user).policy(policy).discountAmount(2000).build();
 
         c1.setUser(user);
         c2.setUser(user);

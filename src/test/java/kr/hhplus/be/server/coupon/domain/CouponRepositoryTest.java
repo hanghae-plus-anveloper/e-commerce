@@ -33,6 +33,7 @@ class CouponRepositoryTest {
 
         couponRepository.save(Coupon.builder()
                 .policy(policy)
+                .userId(user.getId())
                 .user(user)
                 .discountAmount(1000)
                 .discountRate(0.0)
@@ -53,6 +54,7 @@ class CouponRepositoryTest {
 
         Coupon saved = couponRepository.save(Coupon.builder()
                 .policy(policy)
+                .userId(user.getId())
                 .user(user)
                 .discountAmount(2000)
                 .discountRate(0.0)
