@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class TopProductService {
 
     private final TopProductNativeRepository repository;
@@ -33,6 +32,7 @@ public class TopProductService {
                 + ".key('LAST_N_DAYS', 3, 'TOP', 5)",
         sync = true
     )
+    @Transactional(readOnly = true)
     public List<TopProductView> top5InLast3Days() {
         return topNLastNDays(3, 5);
     }
@@ -43,6 +43,7 @@ public class TopProductService {
                 + ".key('LAST_N_DAYS', #days, 'TOP', #limit)",
         sync = true
     )
+    @Transactional(readOnly = true)
     public List<TopProductView> topNLastNDays(int days, int limit) {
         if (days <= 0) throw new IllegalArgumentException("days 는 1 이상이어야 합니다.");
         if (limit <= 0) throw new IllegalArgumentException("limit 는 1 이상이어야 합니다.");
@@ -53,15 +54,14 @@ public class TopProductService {
         return repository.findTopSoldBetween(from, to, limit);
     }
 
-
     // Redis 기반 코드 추가
     @Async
-    @Transactional
     public void recordOrdersAsync(List<TopProductRankingDto> items) {
         for (TopProductRankingDto item : items) {
             try {
                 recordOrder(item.productId(), (int) item.soldQty());
             } catch (Exception ignored) {
+                ignored.printStackTrace();
             }
         }
     }
@@ -81,7 +81,36 @@ public class TopProductService {
         key = "T(kr.hhplus.be.server.common.cache.CacheKey).TOP_PRODUCTS_REALTIME.key('REDIS_LAST3_TOP5')",
         sync = true
     )
+    @Transactional(readOnly = true)
     public List<TopProductView> getTop5InLast3DaysFromRedis() {
+        Set<ZSetOperations.TypedTuple<String>> tuples = redisRepository.getTop5InLast3Days();
+        if (tuples.isEmpty()) return List.of();
+
+        Map<Long, Long> qtyMap = tuples.stream()
+                .filter(t -> t.getValue() != null)
+                .collect(Collectors.toMap(
+                        t -> Long.valueOf(t.getValue()),
+                        t -> t.getScore() != null ? t.getScore().longValue() : 0L,
+                        (a, b) -> a,
+                        LinkedHashMap::new
+                ));
+
+        List<TopProductView> views = repository.findNamesByIds(qtyMap);
+        Map<Long, String> nameMap = views.stream()
+                .collect(Collectors.toMap(TopProductView::productId, TopProductView::name));
+
+        // Redis 순서를 유지하면서 name을 붙여 반환
+        return qtyMap.entrySet().stream()
+                .map(e -> new TopProductView(
+                        e.getKey(),
+                        nameMap.getOrDefault(e.getKey(), "[UNKNOWN]"),
+                        e.getValue()
+                ))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TopProductView> getTop5InLast3DaysFromRedisWithoutCache() {
         Set<ZSetOperations.TypedTuple<String>> tuples = redisRepository.getTop5InLast3Days();
         if (tuples.isEmpty()) return List.of();
 

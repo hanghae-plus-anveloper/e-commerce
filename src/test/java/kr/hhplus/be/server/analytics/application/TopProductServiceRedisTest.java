@@ -17,12 +17,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,6 +50,9 @@ public class TopProductServiceRedisTest {
 
     @Autowired
     private TopProductService topProductService;
+
+    @Autowired
+    private CacheManager cacheManager;
 
     private User user;
     private Product p1, p2, p3, p4, p5, p6;
@@ -79,7 +84,7 @@ public class TopProductServiceRedisTest {
 
     @Test
     @DisplayName("최근 3일 간 누적 집계를 통해 Top5 상품을 Redis 집계 정보를 기반으로 조회한다")
-    void top5InLast3DaysWithRedis() {
+    void top5InLast3DaysWithRedis() throws InterruptedException {
 
         List<TopProductView> before = topProductService.getTop5InLast3DaysFromRedis();
         printRanking("오늘자 주문 발생 전 집계", before);
@@ -92,7 +97,9 @@ public class TopProductServiceRedisTest {
         IntStream.rangeClosed(1, 2).forEach(i -> place(p4, 1)); // 오늘, 2회 * 1개
         IntStream.rangeClosed(1, 1).forEach(i -> place(p5, 1)); // 오늘, 2회 * 1개
 
-        List<TopProductView> after = topProductService.getTop5InLast3DaysFromRedis();
+
+        List<TopProductView> after = topProductService.getTop5InLast3DaysFromRedisWithoutCache();
+        TimeUnit.SECONDS.sleep(2);
         printRanking("오늘자 주문 발생 후 집계", after);
 
         assertThat(after).hasSize(5);
