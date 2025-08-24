@@ -2,6 +2,7 @@ package kr.hhplus.be.server.analytics.application;
 
 
 import kr.hhplus.be.server.IntegrationTestContainersConfig;
+import kr.hhplus.be.server.analytics.domain.TopProductView;
 import kr.hhplus.be.server.balance.domain.Balance;
 import kr.hhplus.be.server.balance.domain.BalanceRepository;
 import kr.hhplus.be.server.order.facade.OrderFacade;
@@ -16,12 +17,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Import(IntegrationTestContainersConfig.class)
-public class TopProductRedisServiceTest {
+public class TopProductServiceRedisTest {
 
     @Autowired
     private OrderFacade orderFacade;
@@ -46,7 +49,10 @@ public class TopProductRedisServiceTest {
     private ProductRepository productRepository;
 
     @Autowired
-    private TopProductRedisService topProductRedisService;
+    private TopProductService topProductService;
+
+    @Autowired
+    private CacheManager cacheManager;
 
     private User user;
     private Product p1, p2, p3, p4, p5, p6;
@@ -78,9 +84,9 @@ public class TopProductRedisServiceTest {
 
     @Test
     @DisplayName("최근 3일 간 누적 집계를 통해 Top5 상품을 Redis 집계 정보를 기반으로 조회한다")
-    void top5InLast3DaysWithRedis() {
+    void top5InLast3DaysWithRedis() throws InterruptedException {
 
-        List<TopProductRankingDto> before = topProductRedisService.getTop5InLast3Days();
+        List<TopProductView> before = topProductService.getTop5InLast3DaysFromRedis();
         printRanking("오늘자 주문 발생 전 집계", before);
         assertThat(before).hasSize(4); // 6번 상품은 포함되지 않음 getTop5InLast3Days 검증
 
@@ -91,11 +97,13 @@ public class TopProductRedisServiceTest {
         IntStream.rangeClosed(1, 2).forEach(i -> place(p4, 1)); // 오늘, 2회 * 1개
         IntStream.rangeClosed(1, 1).forEach(i -> place(p5, 1)); // 오늘, 2회 * 1개
 
-        List<TopProductRankingDto> after = topProductRedisService.getTop5InLast3Days();
+
+        List<TopProductView> after = topProductService.getTop5InLast3DaysFromRedisWithoutCache();
+        TimeUnit.SECONDS.sleep(2);
         printRanking("오늘자 주문 발생 후 집계", after);
 
         assertThat(after).hasSize(5);
-        assertThat(after.get(0).productId()).isEqualTo(p1.getId().toString());
+        assertThat(after.get(0).productId()).isEqualTo(p1.getId());
     }
 
     private void place(Product product, int quantity) {
@@ -104,16 +112,17 @@ public class TopProductRedisServiceTest {
 
     // 오늘 날짜 이전(어제 ~ ) 데이터는 service에 직접 주입(집계용)
     private void record(Product product, int qty, int daysAgo) {
-        topProductRedisService.recordOrder(product.getId().toString(), qty, LocalDate.now().minusDays(daysAgo));
+        topProductService.recordOrder(product.getId().toString(), qty, LocalDate.now().minusDays(daysAgo));
     }
 
-    private void printRanking(String title, List<TopProductRankingDto> rankings) {
+    private void printRanking(String title, List<TopProductView> rankings) {
         System.out.println("=== " + title + " ===");
         for (int i = 0; i < rankings.size(); i++) {
-            TopProductRankingDto dto = rankings.get(i);
-            System.out.printf("%d위 - 상품ID: %s, 판매수량: %d%n",
+            TopProductView dto = rankings.get(i);
+            System.out.printf("%d위 - 상품ID: %d, 상품명: %s, 판매수량: %d%n",
                     i + 1,
                     dto.productId(),
+                    dto.name(),
                     dto.soldQty()
             );
         }

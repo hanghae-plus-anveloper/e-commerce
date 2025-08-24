@@ -9,7 +9,9 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.Date;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 @RequiredArgsConstructor
@@ -42,6 +44,31 @@ public class TopProductNativeRepository {
                         ((Number) r[0]).longValue(),
                         (String) r[1],
                         ((Number) r[2]).longValue()
+                ))
+                .toList();
+    }
+
+    public List<TopProductView> findNamesByIds(Map<Long, Long> qtyMap) {
+        if (qtyMap.isEmpty()) return List.of();
+
+        String sql = """
+        SELECT p.id AS product_id,
+               p.name AS name
+          FROM product p
+         WHERE p.id IN (:ids)
+        """;
+
+        Query q = em.createNativeQuery(sql);
+        q.setParameter("ids", new ArrayList<>(qtyMap.keySet()));
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = q.getResultList();
+
+        return rows.stream()
+                .map(r -> new TopProductView(
+                        ((Number) r[0]).longValue(),
+                        (String) r[1],
+                        qtyMap.get(((Number) r[0]).longValue())
                 ))
                 .toList();
     }

@@ -1,23 +1,25 @@
-package kr.hhplus.be.server.coupon.application;
+package kr.hhplus.be.server.coupon.infrastructure;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
-@Service
+@Repository
 @RequiredArgsConstructor
-public class CouponRedisService {
+public class CouponRedisRepository {
 
     private final StringRedisTemplate redisTemplate;
 
     public List<Long> getAllPolicyIds() {
         Set<String> keys = redisTemplate.keys("COUPON:POLICY:*:REMAINING");
+        if (keys == null) return List.of();
+
         return keys.stream()
                 .map(key -> key.split(":")[2])
                 .map(Long::parseLong)
@@ -25,8 +27,7 @@ public class CouponRedisService {
     }
 
     public void setRemainingCount(Long policyId, int remainingCount) {
-        String remainingKey = CouponRedisKey.remainingKey(policyId);
-        redisTemplate.opsForValue().set(remainingKey, String.valueOf(remainingCount));
+        redisTemplate.opsForValue().set(CouponRedisKey.remainingKey(policyId), String.valueOf(remainingCount));
     }
 
     public void removePolicy(Long policyId) {
@@ -36,9 +37,8 @@ public class CouponRedisService {
     }
 
     public List<Long> peekPending(Long policyId, int count) {
-        String key = CouponRedisKey.pendingKey(policyId);
         Set<ZSetOperations.TypedTuple<String>> tuples =
-                redisTemplate.opsForZSet().rangeWithScores(key, 0, count - 1);
+                redisTemplate.opsForZSet().rangeWithScores(CouponRedisKey.pendingKey(policyId), 0, count - 1);
 
         if (tuples == null) return List.of();
 
@@ -50,22 +50,20 @@ public class CouponRedisService {
 
     public void removePending(Long policyId, List<Long> userIds) {
         if (userIds.isEmpty()) return;
-        String key = CouponRedisKey.pendingKey(policyId);
         redisTemplate.opsForZSet()
-                .remove(key, userIds.stream().map(String::valueOf).toArray());
+                .remove(CouponRedisKey.pendingKey(policyId), userIds.stream().map(String::valueOf).toArray());
+    }
+
+    public void removePendingKey(Long policyId) {
+        redisTemplate.delete(CouponRedisKey.pendingKey(policyId));
     }
 
     public boolean tryIssue(Long userId, Long policyId) {
-        String remainingKey = CouponRedisKey.remainingKey(policyId);
-        String pendingKey = CouponRedisKey.pendingKey(policyId);
-
-        Long remaining = redisTemplate.opsForValue().decrement(remainingKey);
+        Long remaining = redisTemplate.opsForValue().decrement(CouponRedisKey.remainingKey(policyId));
         if (remaining == null || remaining < 0) {
             return false;
         }
-
-        redisTemplate.opsForZSet().add(pendingKey, userId.toString(), getRandScore());
-
+        redisTemplate.opsForZSet().add(CouponRedisKey.pendingKey(policyId), userId.toString(), getRandScore());
         return true;
     }
 

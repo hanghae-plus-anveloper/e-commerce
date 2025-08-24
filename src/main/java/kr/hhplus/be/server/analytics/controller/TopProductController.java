@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.analytics.controller;
 
-import kr.hhplus.be.server.analytics.application.TopProductQueryService;
+import kr.hhplus.be.server.analytics.application.TopProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,7 +11,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TopProductController implements TopProductApi {
 
-    private final TopProductQueryService service;
+    private final TopProductService service;
 
     @Override
     public ResponseEntity<List<TopProductResponseDto>> getTopProducts() {

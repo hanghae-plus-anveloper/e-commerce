@@ -27,10 +27,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 @Import(IntegrationTestContainersConfig.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class TopProductQueryServiceTest {
+class TopProductServiceTest { // 쿼리 기반 테스트 코드 유지
 
     @Autowired
-    private TopProductQueryService queryService;
+    private TopProductService queryService;
 
     @Autowired
     private ProductRepository productRepository;

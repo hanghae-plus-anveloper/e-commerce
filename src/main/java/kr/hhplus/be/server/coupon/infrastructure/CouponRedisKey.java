@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.coupon.application;
+package kr.hhplus.be.server.coupon.infrastructure;
 
 public class CouponRedisKey {
     public static String remainingKey(Long policyId) {

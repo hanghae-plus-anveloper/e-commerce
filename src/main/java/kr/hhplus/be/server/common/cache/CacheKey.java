@@ -2,6 +2,7 @@ package kr.hhplus.be.server.common.cache;
 
 public enum CacheKey {
     TOP_PRODUCTS("CACHE:TOP_PRODUCTS"),
+    TOP_PRODUCTS_REALTIME("CACHE:TOP_PRODUCTS_REALTIME"),
     PRODUCT("CACHE:PRODUCT"),
     BALANCE("CACHE:BALANCE");
 
