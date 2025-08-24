@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.order.facade;
 
-import kr.hhplus.be.server.analytics.application.TopProductRedisService;
+import kr.hhplus.be.server.analytics.application.TopProductService;
 import kr.hhplus.be.server.balance.application.BalanceService;
 import kr.hhplus.be.server.coupon.application.CouponService;
 import kr.hhplus.be.server.coupon.domain.Coupon;
@@ -28,7 +28,7 @@ class OrderFacadeTest {
     private OrderService orderService;
     private BalanceService balanceService;
     private OrderFacade orderFacade;
-    private TopProductRedisService topProductRedisService;
+    private TopProductService topProductService;
 
     @BeforeEach
     void setUp() {
@@ -37,8 +37,8 @@ class OrderFacadeTest {
         couponService = mock(CouponService.class);
         orderService = mock(OrderService.class);
         balanceService = mock(BalanceService.class);
-        topProductRedisService = mock(TopProductRedisService.class);
-        orderFacade = new OrderFacade(userService, productService, couponService, orderService, balanceService, topProductRedisService);
+        topProductService = mock(TopProductService.class);
+        orderFacade = new OrderFacade(userService, productService, couponService, orderService, balanceService, topProductService);
     }
 
     @Test

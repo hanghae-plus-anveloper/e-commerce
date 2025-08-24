@@ -6,6 +6,7 @@ public final class CacheNames {
 
     public static final String DEFAULT = "default";
     public static final String TOP_PRODUCTS = "topProducts";
+    public static final String TOP_PRODUCTS_REALTIME = "topProductsRealtime";
     public static final String PRODUCT = "product";
     public static final String BALANCE = "balance";
 }
