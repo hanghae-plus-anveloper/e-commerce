@@ -71,7 +71,7 @@ public class TopProductService {
     }
 
     public void recordOrder(String productId, int quantity, LocalDate localDate) {
-        redisRepository.recordOrder(productId, quantity, LocalDate.now());
+        redisRepository.recordOrder(productId, quantity, localDate);
     }
 
 
