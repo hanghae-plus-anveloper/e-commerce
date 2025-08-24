@@ -33,6 +33,14 @@ public class RadissonCacheConfig {
         );
         configs.put(CacheNames.TOP_PRODUCTS, topProductsCfg);
 
+
+        // Redis 기반 캐시 (실시간 집계 → 5분 TTL)
+        CacheConfig topProductsRealtimeCfg = new CacheConfig(
+                Duration.ofMinutes(5).toMillis(), // TTL 5분
+                0
+        );
+        configs.put(CacheNames.TOP_PRODUCTS_REALTIME, topProductsRealtimeCfg);
+
         return new RedissonSpringCacheManager(redissonClient, configs);
     }
 
