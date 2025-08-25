@@ -30,4 +30,46 @@
   - 오늘자 주문 생성 후 1번 상품이 1위로 집계되고,
   - 2~5번 상품 또한 오늘 발생한 주문 수량만큼 추가 집계됨
 
-## 
+## 기능 구현
+
+### 이벤트 관련 클래스 구현
+
+- [OrderCompletedEvent.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/common/event/OrderCompletedEvent.java)
+  ```java
+  package kr.hhplus.be.server.common.event;
+  
+  import kr.hhplus.be.server.analytics.application.TopProductRankingDto;
+  
+  import java.util.List;
+  
+  public record OrderCompletedEvent(
+          Long orderId,
+          Long userId,
+          List<TopProductRankingDto> rankingDtoList
+  ) {
+  }
+  ```
+  - 주문 생성 성공 이벤트
+
+- [TopProductEventHandler.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/analytics/application/TopProductEventHandler.java)
+  ```java
+  @Component
+  @RequiredArgsConstructor
+  public class TopProductEventHandler {
+  
+    private final TopProductService topProductService;
+  
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void on(OrderCompletedEvent event) {
+      topProductService.recordOrdersAsync(event.rankingDtoList());
+    }
+  } 
+  ```
+  - `AFTER_COMMIT` 에 의해 트랜젝션이 커밋 되고 나서 이벤트 동작으로 구현
+
+### 테스트 성공 상태 확인
+
+![성공 유지중인 테스트 코드](./assets/002-top-product-success.png)
+- Facade에서 이벤트로 주문 성공 상태를 발행해도 현재 테스트가 성공하는 것을 확인
+
