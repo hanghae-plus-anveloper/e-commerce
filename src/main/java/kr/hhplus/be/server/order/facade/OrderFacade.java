@@ -3,6 +3,7 @@ package kr.hhplus.be.server.order.facade;
 import kr.hhplus.be.server.analytics.application.TopProductRankingDto;
 import kr.hhplus.be.server.analytics.application.TopProductService;
 import kr.hhplus.be.server.balance.application.BalanceService;
+import kr.hhplus.be.server.common.event.OrderCompletedEvent;
 import kr.hhplus.be.server.common.lock.DistributedLock;
 import kr.hhplus.be.server.common.lock.LockKey;
 import kr.hhplus.be.server.coupon.application.CouponService;
@@ -15,6 +16,7 @@ import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.user.application.UserService;
 import kr.hhplus.be.server.user.domain.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderFacade {
 
+    private final ApplicationEventPublisher eventPublisher;
     private final UserService userService;
     private final ProductService productService;
     private final CouponService couponService;
@@ -68,7 +71,8 @@ public class OrderFacade {
                 .toList();
 
         // 비동기로 요청 > 이벤트 방식으로 수정예정
-        topProductService.recordOrdersAsync(rankingDtos);
+        // topProductService.recordOrdersAsync(rankingDtos);
+        eventPublisher.publishEvent(new OrderCompletedEvent(order.getId(), userId, rankingDtos));
 
         return order;
     }
