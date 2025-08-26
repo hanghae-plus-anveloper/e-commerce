@@ -16,6 +16,6 @@ public class TopProductEventHandler {
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(OrderCompletedEvent event) {
-        topProductService.recordOrdersAsync(event.rankingDtoList());
+        topProductService.recordOrdersAsync(event.orderId(), event.rankingDtoList());
     }
 }

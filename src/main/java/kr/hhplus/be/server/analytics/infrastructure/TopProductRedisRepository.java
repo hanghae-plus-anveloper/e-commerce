@@ -5,10 +5,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Repository;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
@@ -22,9 +19,19 @@ public class TopProductRedisRepository {
 
     private static final int TTL_DAYS = 4;
     private static final String PRODUCT_RANKING_PREFIX = "RANKING:PRODUCT:";
+    private static final String ISSUED_ORDER_SET = PRODUCT_RANKING_PREFIX + "ISSUED";
 
     private String getDailyKey(LocalDate date) {
         return PRODUCT_RANKING_PREFIX + date.format(FORMATTER);
+    }
+
+    public boolean isAlreadyIssued(Long orderId) {
+        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(ISSUED_ORDER_SET, orderId.toString()));
+    }
+
+    public void markIssued(Long orderId) {
+        redisTemplate.opsForSet().add(ISSUED_ORDER_SET, orderId.toString());
+        redisTemplate.expire(ISSUED_ORDER_SET, Duration.ofDays(7));
     }
 
     public void recordOrder(String productId, int quantity, LocalDate date) {
@@ -32,6 +39,19 @@ public class TopProductRedisRepository {
         redisTemplate.opsForZSet().incrementScore(key, productId, quantity);
 
         LocalDateTime expireAt = date.plusDays(TTL_DAYS).atStartOfDay();
+        Instant instant = expireAt.atZone(ZoneId.systemDefault()).toInstant();
+        redisTemplate.expireAt(key, instant);
+    }
+
+    public void recordOrders(List<TopProductRecord> items) {
+        LocalDate today = LocalDate.now();
+        String key = getDailyKey(today);
+
+        for (TopProductRecord item : items) {
+            redisTemplate.opsForZSet().incrementScore(key, item.productId(), item.soldQty());
+        }
+
+        LocalDateTime expireAt = today.plusDays(TTL_DAYS).atStartOfDay();
         Instant instant = expireAt.atZone(ZoneId.systemDefault()).toInstant();
         redisTemplate.expireAt(key, instant);
     }
