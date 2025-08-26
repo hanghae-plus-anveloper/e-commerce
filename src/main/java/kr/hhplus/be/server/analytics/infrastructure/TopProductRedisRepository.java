@@ -31,29 +31,17 @@ public class TopProductRedisRepository {
 
     public void markIssued(Long orderId) {
         redisTemplate.opsForSet().add(ISSUED_ORDER_SET, orderId.toString());
-        redisTemplate.expire(ISSUED_ORDER_SET, Duration.ofDays(7));
-    }
-
-    public void recordOrder(String productId, int quantity, LocalDate date) {
-        String key = getDailyKey(date);
-        redisTemplate.opsForZSet().incrementScore(key, productId, quantity);
-
-        LocalDateTime expireAt = date.plusDays(TTL_DAYS).atStartOfDay();
-        Instant instant = expireAt.atZone(ZoneId.systemDefault()).toInstant();
-        redisTemplate.expireAt(key, instant);
+        redisTemplate.expire(ISSUED_ORDER_SET, Duration.ofDays(TTL_DAYS));
     }
 
     public void recordOrders(List<TopProductRecord> items) {
-        LocalDate today = LocalDate.now();
-        String key = getDailyKey(today);
+        String key = getDailyKey(LocalDate.now());
 
         for (TopProductRecord item : items) {
             redisTemplate.opsForZSet().incrementScore(key, item.productId(), item.soldQty());
         }
 
-        LocalDateTime expireAt = today.plusDays(TTL_DAYS).atStartOfDay();
-        Instant instant = expireAt.atZone(ZoneId.systemDefault()).toInstant();
-        redisTemplate.expireAt(key, instant);
+        redisTemplate.expire(key, Duration.ofDays(TTL_DAYS));
     }
 
     public Set<ZSetOperations.TypedTuple<String>> getTop5InLast3Days() {
@@ -74,5 +62,15 @@ public class TopProductRedisRepository {
                 redisTemplate.opsForZSet().reverseRangeWithScores(unionKey, 0, 4);
 
         return tuples != null ? tuples : Set.of();
+    }
+
+    // 테스트 시 과거기록 세팅용 날짜 포함 함수(운영코드 X)
+    public void recordOrder(String productId, int quantity, LocalDate date) {
+        String key = getDailyKey(date);
+        redisTemplate.opsForZSet().incrementScore(key, productId, quantity);
+
+        LocalDateTime expireAt = date.plusDays(TTL_DAYS).atStartOfDay();
+        Instant instant = expireAt.atZone(ZoneId.systemDefault()).toInstant();
+        redisTemplate.expireAt(key, instant);
     }
 }
