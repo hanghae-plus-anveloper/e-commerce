@@ -62,11 +62,77 @@
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(OrderCompletedEvent event) {
-      topProductService.recordOrdersAsync(event.rankingDtoList());
+      topProductService.recordOrdersAsync(event.orderId(), event.rankingDtoList());
     }
   } 
   ```
   - `AFTER_COMMIT` 에 의해 트랜젝션이 커밋 되고 나서 이벤트 동작으로 구현
+  - 주문 생성 함수의 `OrderCompletedEvent`를 수집하여 `TopProductService`에 집계 요청
+
+- [TopProductService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/analytics/application/TopProductService.java)
+  ```java
+  @Service
+  @RequiredArgsConstructor
+  public class TopProductService {
+      /* ... */
+      @Async
+      public void recordOrdersAsync(Long orderId, List<TopProductRankingDto> items) {
+          if (redisRepository.isAlreadyIssued(orderId)) {
+              return;
+          }
+          try {
+              redisRepository.recordOrders(items.stream().map(TopProductMapper::toRecord).toList());
+              redisRepository.markIssued(orderId);
+          } catch (Exception ignored) {
+          }
+      }
+      /* ... */
+  }
+  ```
+  - 기록된 주문인지 확인
+  - 상품 번호 및 수량 배열로 RedisRepository에 기록
+  - 주문 번호 기록
+
+- [TopProductRedisRepository.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/analytics/infrastructure/TopProductRedisRepository.java)
+  ```java
+  @Repository
+  @RequiredArgsConstructor
+  public class TopProductRedisRepository {
+      /* ... */
+    
+      private static final int TTL_DAYS = 4;
+      private static final String PRODUCT_RANKING_PREFIX = "RANKING:PRODUCT:";
+      private static final String ISSUED_ORDER_SET = PRODUCT_RANKING_PREFIX + "ISSUED";
+  
+      private String getDailyKey(LocalDate date) {
+          return PRODUCT_RANKING_PREFIX + date.format(FORMATTER);
+      }
+  
+      public boolean isAlreadyIssued(Long orderId) {
+          return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(ISSUED_ORDER_SET, orderId.toString()));
+      }
+  
+      public void markIssued(Long orderId) {
+          redisTemplate.opsForSet().add(ISSUED_ORDER_SET, orderId.toString());
+          redisTemplate.expire(ISSUED_ORDER_SET, Duration.ofDays(TTL_DAYS));
+      }
+  
+      public void recordOrders(List<TopProductRecord> items) {
+          String key = getDailyKey(LocalDate.now());
+  
+          for (TopProductRecord item : items) {
+              redisTemplate.opsForZSet().incrementScore(key, item.productId(), item.soldQty());
+          }
+  
+          redisTemplate.expire(key, Duration.ofDays(TTL_DAYS));
+      }
+      
+      /* ... */
+  }
+  ```
+  - `isAlreadyIssued`: SET 자료구조의 중복 발급 확인 함수
+  - `markIssued`: 상품별 수량 증가 후 완료된 주문 기록, TTL은 집계함수와 동일하게 설정
+  - `recordOrders`: 상품 배열 기반으로 `날짜별` 판매량 을 ZSET에 기록
 
 ### 테스트 성공 상태 확인
 
