@@ -19,21 +19,42 @@
 > 분산 환경을 고려한 도메인별 책임의 트랙젠션 로직 설계
 > 현재 비즈니스 로직 중 다수의 도메인이 모두 연계되어 처리되는 상태를 단일 트랜젝션에서 관리한다면 일관성의 보장은 쉽지만, 
 
+### 발생 가능한 문제
+
+- 부분 실패 
+  - `Order`는 생성되었지만 `Product`에서 재고 차감 실패
+  - `Coupon` 사용 처리 후 `Balance` 차감 실패 → 쿠폰만 소모된 상태
+- 이벤트 순서 문제
+  - `StockReservedEvent`보다 `CouponUsedEvent`가 먼저 도착하거나, 중복 전달되는 경우
+- 중복 처리
+  - 동일 이벤트가 두 번 소비되면 잔액이 이중 차감될 위험
+- 최종 일관성 지연
+  - 쓰기(`Command`)는 즉시 반영되었으나, 조회(`Query`)는 이벤트 동기화 지연으로 잠시 다른 상태 보일 수 있음
+- 보상 트랜잭션 필요성
+  - `Balance` 차감 실패 시 → 이미 차감된 재고/쿠폰을 원복해야 함
+
 ### 설계 방향
 
-- `OrderFacade`에서 주문에 대한 기본 정보를 조회
-  - READ: 재고 및 금액 확인, 유요한 쿠폰 여부 확인, 잔액이 충분한지 확인은 Facade 내에서 각 서비스에 직접 조회 
-  - UPDATE: 재고 차감, 쿠폰 사용, 잔액 차감은 분리된 도메인에서 발행된 이벤트를 확인하여 수행
+#### 1. 주문 시작
+ 
+- `OrderCommandService`가 사용자 요청을 받아 `Order` 엔티티를 `OrderStatus.DRAFT`로 생성
+- 생성 직후 `OrderSagaRepository`에 초기 상태를 기록한 뒤 `OrderRequestedEvent` 발행
+  - `OrderSagaRepository`에 저장하는 타이밍이 어려웠습니다.
+  - `DRAFT` 상태를 `PENDING` 앞에 하나 더 둬서 다른 도메인에 반환 지점이 확실히 존재하도록 단계를 나눴습니다.
+- 주문 상태를 `PENDING`으로 다른 도메인에 전이
 
-- 단순 조회나 가능 여부는 각각의 도메인의 트랜젝션 없이(롤백이 없으니) 기존 `OrderFacade`에서 수행
-  - Order의 status를 추가하고, `PENDING` 상태로 생성 후 주문 생성 이벤트`OrderPlacedEvent` 발행
-  - OrderPlacedEvent
-    - orderId: Saga 테이블 구분자
-    - items: 재고 차감용 상품 id 및 수량 배열
-    - couponId: 사용 처리할 쿠폰 id
-    - totalPrice: 잔액 차감용 최종 금액(쿠폰 할인 예상액 포함)
-  - `OrderEventHandler` 자체에도 `OrderPlacedEvent`감지하여 Saga 테이블(Redis 기반으로 예정) 상에 orderId 기반으로 hashes에 저장 
-- 각각의 도메인에서 차감/사용 등 UPDATE를 개별 트랜젝션 내에서 처리 후 성공 실패 여부를 이벤트로 발행
-  - `OrderEventHandler`가 각 도메인이 발행하는 성공/실패 이벤트를 받아서 이후 로직 처리
-  - 모두 반환되었을때엔 PENDING에서 COMPLETED로 변경하고
-  - 한가지라도 실패되었을 때, 나머지 도메인에서 orderId기반으로 보상 트랜젝션이 동작하도록 추가 로직 수행
+#### 2. 이벤트 흐름 및 도메인 역할
+
+- `OrderRequestedEvent(orderId, userId, items, couponId)` 발행
+  - 각 도메인이 이를 구독하여 각각의 트렌젝션에서 로직 실행
+  - `Product` 도메인: 재고 확인 및 차감 시도 
+    - 성공 시 `StockReservedEvent(orderId)`, `PriceQuotedEvent(orderId, subtotalAmount)` 발행
+    - 실패 시 `StockReserveFailedEvent(orderId, reason)` 발행
+  - `Coupon` 도메인: 쿠폰이 있으면 유효성 확인 및 사용 처리 
+    - 사용 시 `CouponUsedEvent(orderId, discountAmount, couponId)` 발행
+    - 실패 시 `CouponUseFailedEvent(orderId, reason)` 발행
+    - 미사용 시에는 `CouponSkippedEvent(orderId)` 발행
+
+- `OrderSagaHandler`: 위 이벤트를 구독하여 Saga 상태를 갱신
+  - 모든 성공 이벤트(`PriceQuoted`, `StockReservedEvent`, `CouponUsedEvent`/`CouponSkippedEvent`) 수집 
+  - 결제 금액(payable) 계산 후 PaymentRequestedEvent 발행
