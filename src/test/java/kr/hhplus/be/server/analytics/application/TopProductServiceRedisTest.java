@@ -106,16 +106,21 @@ public class TopProductServiceRedisTest {
     }
 
     @Test
-    @DisplayName("OrderCompletedEvent 발생 시 외부 핸들러가 Redis에 기록을 남긴다")
-    void externalHandlerRecordsInRedis() throws Exception {
-        User user = userRepository.save(User.builder().name("mock-user").build());
-        Product product = productRepository.save(Product.builder().name("mock-product").price(100).stock(10).build());
+    @DisplayName("OrderCompletedEvent 발생 시 두 개의 핸들러(집계, 외부)가 모두 동작한다")
+    void bothHandlersTriggeredByOneEvent() throws Exception {
+        User user = userRepository.save(User.builder().name("multi-handler").build());
+        Product product = productRepository.save(Product.builder().name("multi-product").price(100).stock(20).build());
 
-        Order order = orderFacade.placeOrder(user.getId(), List.of(new OrderItemCommand(product.getId(), 1)), null);
+        Order order = orderFacade.placeOrder(user.getId(), List.of(new OrderItemCommand(product.getId(), 2)), null);
 
         Thread.sleep(1000);
-        Long count = externalRedisRepository.countRecords(order.getId());
-        assertThat(count).isGreaterThanOrEqualTo(1L);
+
+        List<TopProductView> ranking = topProductService.getTop5InLast3DaysFromRedisWithoutCache();
+        boolean productRanked = ranking.stream().anyMatch(r -> r.productId().equals(product.getId()));
+        assertThat(productRanked).isTrue();
+
+        Long externalCount = externalRedisRepository.countRecords(order.getId());
+        assertThat(externalCount).isGreaterThanOrEqualTo(1L);
     }
 
     private void place(Product product, int quantity) {

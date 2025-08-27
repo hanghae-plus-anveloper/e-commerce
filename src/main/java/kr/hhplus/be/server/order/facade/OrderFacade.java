@@ -1,7 +1,14 @@
 package kr.hhplus.be.server.order.facade;
 
+import java.util.Comparator;
+import java.util.List;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
 import kr.hhplus.be.server.analytics.application.TopProductRankingDto;
-import kr.hhplus.be.server.analytics.application.TopProductService;
+// import kr.hhplus.be.server.analytics.application.TopProductService;
 import kr.hhplus.be.server.balance.application.BalanceService;
 import kr.hhplus.be.server.common.event.OrderCompletedEvent;
 import kr.hhplus.be.server.common.lock.DistributedLock;
@@ -16,12 +23,6 @@ import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.user.application.UserService;
 import kr.hhplus.be.server.user.domain.User;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Comparator;
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -33,7 +34,7 @@ public class OrderFacade {
     private final CouponService couponService;
     private final OrderService orderService;
     private final BalanceService balanceService;
-    private final TopProductService topProductService;
+    // private final TopProductService topProductService;
 
     @Transactional
     @DistributedLock(prefix = LockKey.PRODUCT, ids = "#orderItems.![productId]")
@@ -43,7 +44,8 @@ public class OrderFacade {
         List<OrderItem> items = orderItems.stream()
                 .sorted(Comparator.comparing(OrderItemCommand::getProductId)) // 상품 순서 정렬
                 .map(command -> {
-                    Product product = productService.verifyAndDecreaseStock(command.getProductId(), command.getQuantity());
+                    Product product = productService.verifyAndDecreaseStock(command.getProductId(),
+                            command.getQuantity());
                     return OrderItem.of(product, product.getPrice(), command.getQuantity(), 0);
                 })
                 .toList();
@@ -51,7 +53,6 @@ public class OrderFacade {
         int total = items.stream()
                 .mapToInt(OrderItem::getSubtotal)
                 .sum();
-
 
         if (couponId != null) {
             Coupon coupon = couponService.useCoupon(couponId, user.getId());
@@ -64,7 +65,6 @@ public class OrderFacade {
         balanceService.useBalance(user, total);
 
         Order order = orderService.createOrder(user, items, total);
-
 
         List<TopProductRankingDto> rankingDtos = items.stream()
                 .map(i -> new TopProductRankingDto(i.getProduct().getId().toString(), i.getQuantity()))
