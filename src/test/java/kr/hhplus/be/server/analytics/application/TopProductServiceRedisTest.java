@@ -1,33 +1,34 @@
 package kr.hhplus.be.server.analytics.application;
 
-
-import kr.hhplus.be.server.IntegrationTestContainersConfig;
-import kr.hhplus.be.server.analytics.domain.TopProductView;
-import kr.hhplus.be.server.balance.domain.Balance;
-import kr.hhplus.be.server.balance.domain.BalanceRepository;
-import kr.hhplus.be.server.order.facade.OrderFacade;
-import kr.hhplus.be.server.order.facade.OrderItemCommand;
-import kr.hhplus.be.server.product.domain.Product;
-import kr.hhplus.be.server.product.domain.ProductRepository;
-import kr.hhplus.be.server.user.domain.User;
-import kr.hhplus.be.server.user.domain.UserRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cache.CacheManager;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+import kr.hhplus.be.server.IntegrationTestContainersConfig;
+import kr.hhplus.be.server.analytics.domain.TopProductView;
+import kr.hhplus.be.server.balance.domain.Balance;
+import kr.hhplus.be.server.balance.domain.BalanceRepository;
+import kr.hhplus.be.server.external.mock.infrastructure.OrderExternalRedisRepository;
+import kr.hhplus.be.server.order.domain.Order;
+import kr.hhplus.be.server.order.facade.OrderFacade;
+import kr.hhplus.be.server.order.facade.OrderItemCommand;
+import kr.hhplus.be.server.product.domain.Product;
+import kr.hhplus.be.server.product.domain.ProductRepository;
+import kr.hhplus.be.server.user.domain.User;
+import kr.hhplus.be.server.user.domain.UserRepository;
 
 @SpringBootTest
 @Testcontainers
@@ -52,7 +53,7 @@ public class TopProductServiceRedisTest {
     private TopProductService topProductService;
 
     @Autowired
-    private CacheManager cacheManager;
+    private OrderExternalRedisRepository externalRedisRepository;
 
     private User user;
     private Product p1, p2, p3, p4, p5, p6;
@@ -81,7 +82,6 @@ public class TopProductServiceRedisTest {
         IntStream.rangeClosed(1, 5).forEach(i -> record(p6, 1, 3)); // 3일 전, 5회 * 1개 - 조회되지 않아야 함
     }
 
-
     @Test
     @DisplayName("최근 3일 간 누적 집계를 통해 Top5 상품을 Redis 집계 정보를 기반으로 조회한다")
     void top5InLast3DaysWithRedis() throws InterruptedException {
@@ -97,13 +97,25 @@ public class TopProductServiceRedisTest {
         IntStream.rangeClosed(1, 2).forEach(i -> place(p4, 1)); // 오늘, 2회 * 1개
         IntStream.rangeClosed(1, 1).forEach(i -> place(p5, 1)); // 오늘, 2회 * 1개
 
-
         List<TopProductView> after = topProductService.getTop5InLast3DaysFromRedisWithoutCache();
         TimeUnit.SECONDS.sleep(2);
         printRanking("오늘자 주문 발생 후 집계", after);
 
         assertThat(after).hasSize(5);
         assertThat(after.get(0).productId()).isEqualTo(p1.getId());
+    }
+
+    @Test
+    @DisplayName("OrderCompletedEvent 발생 시 외부 핸들러가 Redis에 기록을 남긴다")
+    void externalHandlerRecordsInRedis() throws Exception {
+        User user = userRepository.save(User.builder().name("mock-user").build());
+        Product product = productRepository.save(Product.builder().name("mock-product").price(100).stock(10).build());
+
+        Order order = orderFacade.placeOrder(user.getId(), List.of(new OrderItemCommand(product.getId(), 1)), null);
+
+        Thread.sleep(1000);
+        Long count = externalRedisRepository.countRecords(order.getId());
+        assertThat(count).isGreaterThanOrEqualTo(1L);
     }
 
     private void place(Product product, int quantity) {
@@ -123,8 +135,7 @@ public class TopProductServiceRedisTest {
                     i + 1,
                     dto.productId(),
                     dto.name(),
-                    dto.soldQty()
-            );
+                    dto.soldQty());
         }
     }
 }
