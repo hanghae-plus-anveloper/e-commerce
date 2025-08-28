@@ -29,7 +29,6 @@ class OrderFacadeTest {
     private OrderService orderService;
     private BalanceService balanceService;
     private OrderFacade orderFacade;
-    private TopProductService topProductService;
     private ApplicationEventPublisher eventPublisher;
 
     @BeforeEach
@@ -40,8 +39,7 @@ class OrderFacadeTest {
         couponService = mock(CouponService.class);
         orderService = mock(OrderService.class);
         balanceService = mock(BalanceService.class);
-        topProductService = mock(TopProductService.class);
-        orderFacade = new OrderFacade(eventPublisher, userService, productService, couponService, orderService, balanceService, topProductService);
+        orderFacade = new OrderFacade(eventPublisher, userService, productService, couponService, orderService, balanceService);
     }
 
     @Test

@@ -73,4 +73,13 @@ public class TopProductRedisRepository {
         Instant instant = expireAt.atZone(ZoneId.systemDefault()).toInstant();
         redisTemplate.expireAt(key, instant);
     }
+
+    public void clearAll() {
+        redisTemplate.delete(ISSUED_ORDER_SET);
+        LocalDate today = LocalDate.now();
+        for (int i = 0; i < TTL_DAYS; i++) {
+            redisTemplate.delete(getDailyKey(today.minusDays(i)));
+        }
+        redisTemplate.delete(PRODUCT_RANKING_PREFIX + "TOP5LAST3DAYS");
+    }
 }
