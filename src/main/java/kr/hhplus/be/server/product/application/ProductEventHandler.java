@@ -21,6 +21,6 @@ public class ProductEventHandler {
     public void on(OrderRequestedEvent event) {
         log.info("[PRODUCT] handling OrderRequestedEvent for order={}, items={}",
                 event.orderId(), event.items().size());
-        productCommandService.reserveStock(event.orderId(), event.items());
+        productCommandService.reserveStock(event.orderId(), event.items(), event.couponId());
     }
 }

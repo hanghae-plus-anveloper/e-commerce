@@ -23,7 +23,7 @@ public class ProductCommandService {
     private final ApplicationEventPublisher publisher;
 
     @Transactional
-    public void reserveStock(Long orderId, List<OrderSagaItem> items) {
+    public void reserveStock(Long orderId, List<OrderSagaItem> items, Long couponId) {
         try {
             int subTotal = 0;
 
@@ -46,7 +46,7 @@ public class ProductCommandService {
 
         } catch (Exception e) {
             log.warn("[PRODUCT] order={} stock reservation failed, reason={}", orderId, e.getMessage());
-            publisher.publishEvent(new StockReserveFailedEvent(orderId, e.getMessage()));
+            publisher.publishEvent(new StockReserveFailedEvent(orderId, couponId, e.getMessage()));
         }
     }
 
