@@ -432,6 +432,26 @@ stateDiagram-v2
               log.info("[ORDER] order={} moved to PENDING", event.orderId());
           });
       }
+
+      @Async
+      @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+      public void on(OrderCompletedEvent event) {
+          orderRepository.findById(event.orderId()).ifPresent(order -> {
+              order.markPaid();
+              orderRepository.save(order);
+              log.info("[ORDER] order={} moved to PAID", event.orderId());
+          });
+      }
+
+      @Async
+      @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+      public void on(OrderFailedEvent event) {
+          orderRepository.findById(event.orderId()).ifPresent(order -> {
+              order.cancel();
+              orderRepository.save(order);
+              log.info("[ORDER] order={} moved to CANCELED", event.orderId());
+          });
+      }
   }
   ```
   </details>
