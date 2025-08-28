@@ -65,28 +65,28 @@ sequenceDiagram
     Saga->>Order: OrderCompletedEvent
 ```
 
-- `OrderRequestedEvent(orderId, userId, items, couponId)` 발행
+- `OrderRequestedEvent` 발행
   - 각 도메인이 이를 구독하여 각각의 트렌젝션에서 로직 실행
   - `Product` 도메인: 재고 확인 및 차감 시도 
-    - 성공 시 `StockReservedEvent(orderId)`, `PriceQuotedEvent(orderId, subtotalAmount)` 발행
-    - 실패 시 `StockReserveFailedEvent(orderId, reason)` 발행
+    - 성공 시 `StockReservedEvent`, `PriceQuotedEvent` 발행
+    - 실패 시 `StockReserveFailedEvent` 발행
   - `Coupon` 도메인: 쿠폰이 있으면 유효성 확인 및 사용 처리 
-    - 사용 시 `CouponUsedEvent(orderId, discountAmount, couponId)` 발행
-    - 실패 시 `CouponUseFailedEvent(orderId, reason)` 발행
+    - 사용 시 `CouponUsedEvent` 발행
+    - 실패 시 `CouponUseFailedEvent` 발행
     - 미사용 시에는 `CouponSkippedEvent(orderId)` 발행 (혹은 0원으로 성공 처리)
   - `Balance` 도메인: 총액 및 차감액을 바탕으로 잔액 차감
     - ~~성공 이벤트(`PriceQuotedEvent`, `CouponUsedEvent`/`CouponSkippedEvent`)를 기반으로 최종 결제 금액 계산~~
     - `OrderSagaHandler`가 발행한 `OrderCalculatedEvent`에 의해 잔액 차감 수행
     - 결제 가능 여부 확인 후 차감
-    - 성공 시 `BalanceDeductedEvent(orderId, totalAmount)` 발행
-    - 실패 시 `BalanceDeductionFailedEvent(orderId, reason)` 발행
+    - 성공 시 `BalanceDeductedEvent` 발행
+    - 실패 시 `BalanceDeductionFailedEvent` 발행
 
 - `OrderSagaHandler`: 위 이벤트를 구독하여 Saga 상태를 갱신
   - 모든 성공 이벤트 수집
     - `Product` → `StockReservedEvent`와 `PriceQuotedEvent` 수집
     - `Coupon` → `CouponUsedEvent` 또는 `CouponSkippedEvent` 수집
     - `Balance` → `BalanceDeductedEvent` 수집
-  - 최종적으로 `OrderCompletedEvent(orderId)` 발행
+  - 최종적으로 `OrderCompletedEvent` 발행
     - 집계, 외부 전송 핸들러가 이를 수집 
 
 
