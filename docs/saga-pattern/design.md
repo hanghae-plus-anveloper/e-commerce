@@ -16,8 +16,9 @@
 
 ### 목적
 
-> 분산 환경을 고려한 도메인별 책임의 트랙젠션 로직 설계
-> 현재 비즈니스 로직 중 다수의 도메인이 모두 연계되어 처리되는 상태를 단일 트랜젝션에서 관리한다면 일관성의 보장은 쉽지만, 
+> 분산 환경을 고려한 도메인별 책임의 트랙젠션 로직 설계   
+> 현재 비즈니스 로직 중 다수의 도메인이 모두 연계되어 처리되는 상태를 단일 트랜젝션에서 관리한다면 일관성의 보장은 쉽지만, 확장성이 떨어진다.   
+> 분산 트
 
 ### 발생 가능한 문제
 
@@ -68,12 +69,12 @@ sequenceDiagram
 - `OrderRequestedEvent` 발행
   - 각 도메인이 이를 구독하여 각각의 트렌젝션에서 로직 실행
   - `Product` 도메인: 재고 확인 및 차감 시도 
-    - 성공 시 `StockReservedEvent`, `PriceQuotedEvent` 발행
+    - 성공 시 `StockReservedEvent`, ~~`PriceQuotedEvent`~~ 발행
     - 실패 시 `StockReserveFailedEvent` 발행
   - `Coupon` 도메인: 쿠폰이 있으면 유효성 확인 및 사용 처리 
     - 사용 시 `CouponUsedEvent` 발행
     - 실패 시 `CouponUseFailedEvent` 발행
-    - 미사용 시에는 `CouponSkippedEvent(orderId)` 발행 (혹은 0원으로 성공 처리)
+    - ~~미사용 시에는 `CouponSkippedEvent` 발행 (혹은 0원으로 성공 처리)~~
   - `Balance` 도메인: 총액 및 차감액을 바탕으로 잔액 차감
     - ~~성공 이벤트(`PriceQuotedEvent`, `CouponUsedEvent`/`CouponSkippedEvent`)를 기반으로 최종 결제 금액 계산~~
     - `OrderSagaHandler`가 발행한 `OrderCalculatedEvent`에 의해 잔액 차감 수행
@@ -82,11 +83,14 @@ sequenceDiagram
     - 실패 시 `BalanceDeductionFailedEvent` 발행
 
 - `OrderSagaHandler`: 위 이벤트를 구독하여 Saga 상태를 갱신
-  - 모든 성공 이벤트 수집
-    - `Product` → `StockReservedEvent`와 `PriceQuotedEvent` 수집
-    - `Coupon` → `CouponUsedEvent` 또는 `CouponSkippedEvent` 수집
+  - ~~모든~~ Product, Coupon 도메인의 성공 이벤트 수집
+    - `Product` → `StockReservedEvent`~~와 `PriceQuotedEvent`~~ 수집
+    - `Coupon` → `CouponUsedEvent` ~~또는 `CouponSkippedEvent`~~ 수집
+    - ~~`Balance` → `BalanceDeductedEvent` 수집~~
+  - [추가] `OrderCalculatedEvent` 발행 (`StockReservedEvent`, `CouponUsedEvent` 수집 시)
     - `Balance` → `BalanceDeductedEvent` 수집
   - 최종적으로 `OrderCompletedEvent` 발행
+    - `OrderEventHandler` → `OrderStatus.PAID` 상태 변경  
     - 집계, 외부 전송 핸들러가 이를 수집 
 
 
@@ -109,6 +113,7 @@ stateDiagram-v2
 - 각 도메인은 다른 도메인의 실패 여부를 수집하고, 실행여부를 확인하여 원복 로직 수행
 - 다른 도메인의 실패 이벤트로 인한 원복 쿼리와 원래 트랜젝션 쿼리의 충돌이 발생할 수도 있고,
 - 실패 이벤트가 먼저 수집된 뒤에 정상 이벤트를 수집하게 되면 실패가 무시되어 실행될 수 있음
+- 각 보상 핸들러는 `orderId`로 `SagaState`를 조회해 해당 도메인이 실제로 `SUCCESS`였던 경우에만 복구
 - Saga 저장소에서 도메인별 성공/실패/취소됨/복구됨 상태를 관리
 
 ### 4. 동시성 제어 설계
@@ -519,12 +524,10 @@ stateDiagram-v2
                 publisher.publishEvent(new CouponUsedEvent(orderId, couponId, discountAmount, discountRate));
             } catch (Exception e) {
                 publisher.publishEvent(new CouponUseFailedEvent(orderId, couponId, e.getMessage(), items));
-                throw e;
             }
         }
   
         @Transactional
-        @DistributedLock(prefix = LockKey.COUPON, ids = "#couponId")
         public void skipCoupon(Long orderId) {
             publisher.publishEvent(new CouponUsedEvent(orderId, null, 0,0.0));
         }
