@@ -10,6 +10,7 @@
 - 주문 생성은 `OrderFacade` 내에서 트랜잭션 단위로 처리
 - 주문 생성 완료 시점에 **주문 완료 이벤트(`OrderCompletedEvent`)** 발행
 - 부가 로직은 별도 이벤트 핸들러에서 수행
+- 동일 이벤트에 대해 내부 집계(`TopProduct`) 와 외부 집계(`Mock External`) 가 동시에 동작하도록 구현
 
 ### 이벤트 흐름
 
@@ -19,6 +20,10 @@
 - `TopProductEventHandler`
   - `OrderCompletedEvent` 수신
   - 주문 상품 정보를 기반으로 랭킹 집계 수행
+- `OrderExternalEventHandler`(`Mock External`)
+  - 동일하게 `OrderCompletedEvent` 수신
+  - 외부 시스템에 전달되는 시뮬레이션을 Redis 저장소에 기록
+  - 학습 목적으로 외부 API 대신 로그 기록 및 `Redis` 저장소(`OrderExternalRedisRepository`)를 사용
 
 ### 기능 구현 전 테스트 코드
 
@@ -133,6 +138,11 @@
   - `isAlreadyIssued`: SET 자료구조의 중복 발급 확인 함수
   - `markIssued`: 상품별 수량 증가 후 완료된 주문 기록, TTL은 집계함수와 동일하게 설정
   - `recordOrders`: 상품 배열 기반으로 `날짜별` 판매량 을 ZSET에 기록
+
+### 외부 전송 Mock 핸들러 구현
+
+- [OrderExternalEventHandler.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/external/mock/application/OrderExternalEventHandler.java)
+- [OrderExternalRedisRepository.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/external/mock/infrastructure/OrderExternalRedisRepository.java)
 
 ### 테스트 성공 상태 확인
 
