@@ -468,47 +468,54 @@ stateDiagram-v2
     @Service
     @RequiredArgsConstructor
     public class ProductCommandService {
-    
+
         private final ProductRepository productRepository;
         private final ApplicationEventPublisher publisher;
-    
+
         @Transactional
         @DistributedLock(prefix = LockKey.PRODUCT, ids = "#items.![productId]")
         public void reserveStock(Long orderId, List<OrderSagaItem> items, Long couponId) {
             try {
-                int subTotal = 0;
-    
-                for (OrderSagaItem item : items) {
-                    Product product = productRepository.findById(item.getProductId())
-                            .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다. id=" + item.getProductId()));
-    
-                    if (product.getStock() < item.getQuantity()) {
-                        throw new IllegalStateException("재고 부족: productId=" + product.getId());
-                    }
-    
-                    product.decreaseStock(item.getQuantity());
-                    subTotal += product.getPrice() * item.getQuantity();
+                Map<Long, Product> productMap = productRepository
+                        .findAllById(items.stream().map(OrderSagaItem::getProductId).toList())
+                        .stream().collect(Collectors.toMap(Product::getId, p -> p));
+                if (productMap.size() != items.size()) {
+                    throw new IllegalStateException("요청한 상품 중 존재하지 않는 항목이 있습니다.");
                 }
-    
+
+                int subTotal = 0;
+
+                for (OrderSagaItem item : items) {
+                    Long pid = item.getProductId();
+                    int qty = item.getQuantity();
+
+                    int affected = productRepository.decreaseStockIfAvailable(pid, qty);
+                    if (affected == 0) {
+                        throw new IllegalStateException("재고 부족 또는 동시성 경합: productId=" + pid);
+                    }
+
+                    Product p = productMap.get(pid);
+                    subTotal += p.getPrice() * qty;
+                }
+
                 log.info("[PRODUCT] order={} stock reserved successfully, subTotal={}", orderId, subTotal);
-    
+
                 // 성공 이벤트 발행
                 publisher.publishEvent(new StockReservedEvent(orderId, subTotal));
-    
+
             } catch (Exception e) {
                 log.warn("[PRODUCT] order={} stock reservation failed, reason={}", orderId, e.getMessage());
                 publisher.publishEvent(new StockReserveFailedEvent(orderId, couponId, e.getMessage()));
             }
         }
-    
+
         @Transactional
         @DistributedLock(prefix = LockKey.PRODUCT, ids = "#items.![productId]")
         public void restoreStock(Long orderId, List<OrderSagaItem> items) {
             for (OrderSagaItem item : items) {
-                Product product = productRepository.findById(item.getProductId())
-                        .orElseThrow(() -> new IllegalArgumentException("상품 없음: " + item.getProductId()));
-                product.increaseStock(item.getQuantity());
+                productRepository.increaseStock(item.getProductId(), item.getQuantity());
             }
+            log.info("[PRODUCT] order={} stock restored for {} items", orderId, items.size());
         }
     }
     ```
