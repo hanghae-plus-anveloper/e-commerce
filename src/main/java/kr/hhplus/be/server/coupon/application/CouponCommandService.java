@@ -25,13 +25,16 @@ public class CouponCommandService {
 
     @Transactional
     @DistributedLock(prefix = LockKey.COUPON, ids = "#couponId")
-    public void useCoupon(Long couponId, Long orderId, List<OrderSagaItem> items) {
-        Coupon coupon = couponRepository.findById(couponId)
-                .orElseThrow(() -> new InvalidCouponException("존재하지 않는 쿠폰입니다. id=" + couponId));
-
+    public void useCoupon(Long couponId, Long userId, Long orderId, List<OrderSagaItem> items) {
         try {
-            coupon.use();
-            couponRepository.save(coupon);
+            int updated = couponRepository.markCouponAsUsed(couponId, userId);
+            if (updated == 0) {
+                publisher.publishEvent(new CouponUseFailedEvent(
+                        orderId, couponId, "쿠폰을 사용할 수 없거나 이미 사용됨", items));
+                return;
+            }
+            Coupon coupon = couponRepository.findById(couponId)
+                    .orElseThrow(() -> new InvalidCouponException("쿠폰 조회 실패: id=" + couponId));
 
             int discountAmount = coupon.getDiscountAmount();
             double discountRate = coupon.getDiscountRate();
@@ -50,9 +53,6 @@ public class CouponCommandService {
     @Transactional
     @DistributedLock(prefix = LockKey.COUPON, ids = "#couponId")
     public void restoreCoupon(Long couponId) {
-        Coupon coupon = couponRepository.findById(couponId)
-                .orElseThrow(() -> new InvalidCouponException("존재하지 않는 쿠폰입니다. id=" + couponId));
-        coupon.restore();
-        couponRepository.save(coupon);
+        couponRepository.restoreCouponIfUsed(couponId);
     }
 }
