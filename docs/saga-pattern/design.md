@@ -108,7 +108,7 @@
     - `discountAmount`: 쿠폰 할인액
     - `totalAmount`: 최종 금액
 
-## 테스트 및 기능 구현
+## 기능 구현을 위한 필요 클래스
 
 ### 상태 저장소 구성
 
@@ -166,4 +166,6 @@
 
 - `TopProductEventHandler` (구현됨)
 - `OrderExternalEventHandler` (구현됨)
+
+## 기능 구현
 
