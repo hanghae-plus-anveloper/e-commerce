@@ -6,7 +6,8 @@ import java.util.List;
 
 public record CouponUseFailedEvent(
         Long orderId,
-        List<OrderSagaItem> items,
-        String reason
+        Long couponId,
+        String reason,
+        List<OrderSagaItem> items
 ) {
 }
