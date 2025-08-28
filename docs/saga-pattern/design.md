@@ -111,13 +111,25 @@ stateDiagram-v2
 - 실패 이벤트가 먼저 수집된 뒤에 정상 이벤트를 수집하게 되면 실패가 무시되어 실행될 수 있음
 - Saga 저장소에서 도메인별 성공/실패/취소됨/복구됨 상태를 관리
 
-### 4. CQRS 설계
+### 4. 동시성 제어 설계
+
+- 단일 자원 충돌을 막기 위해 Redisson 기반 `@DistributedLock` 적용
+- 주요 기준 키
+  - Product: `productId` 기준 → `reserveStock` / `restoreStock`
+  - Coupon: `couponId` 기준 → `useCoupon` / `restoreCoupon`
+  - Balance: `userId` 기준 → `deductBalance` / `restoreBalance`
+- Order 단계에서는 멀티락을 사용하지 않음
+  - 주문은 초안(DRAFT)만 생성하고, 실제 차감은 도메인별로 병렬적으로 수행되므로 각 도메인에서 개별 락을 적용
+  - userId 기준으로 중복 요청방지를 위한 락 적용 
+- @Version 기반 낙관적 락, 조건부 업데이트 쿼리 병행 → DB 일관성과 Redis 분산 환경 모두에서 안전성 확보
+
+### 5. CQRS 설계
 
 - 각 도메인 별 Command, Query 모델을 분리하여 수정과 조회 로직을 분산
 - 롤백이 필요한 수정 함수만 트랜젝션 내에서 처리 가능
 - 다만, 지금 모든 도메인이 각자 상태값을 바꾸는 설계로 구현하여 현재 주문 생성 중에는 각 도메인의 `Command` 부분만 사용
 
-### 5. Saga 상태 저장소
+### 6. Saga 상태 저장소
 
 - 발급된 Saga의 현재 상태를 추적하기 위한 저장소, JPA 혹은 Redis에 구현 가능
 - 모든 도메인이 이벤트 기반으로 움직이기 때문에, 영속성을 강하게 가져가기 위해 JPA 기반으로 구현
@@ -375,6 +387,7 @@ stateDiagram-v2
       private final ApplicationEventPublisher publisher;
   
       @Transactional
+      @DistributedLock(prefix = LockKey.ORDER, ids = "#userId")
       public Order createDraft(Long userId, List<OrderItemCommand> items, Long couponId) {
   
           Order order = Order.draft(userId, couponId);
@@ -422,20 +435,160 @@ stateDiagram-v2
 ### 각 도메인별 핸들러 및 테스트
 
 - Product
-  - `ProductCommandService`: 상품 재고 차감/원복 비즈니스 로직
+  - [ProductCommandService](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/application/ProductCommandService.java): 상품 재고 차감/원복 비즈니스 로직
+    <details><summary>주요 코드</summary>
+    
+    ```java
+    @Slf4j
+    @Service
+    @RequiredArgsConstructor
+    public class ProductCommandService {
+    
+        private final ProductRepository productRepository;
+        private final ApplicationEventPublisher publisher;
+    
+        @Transactional
+        @DistributedLock(prefix = LockKey.PRODUCT, ids = "#items.![productId]")
+        public void reserveStock(Long orderId, List<OrderSagaItem> items, Long couponId) {
+            try {
+                int subTotal = 0;
+    
+                for (OrderSagaItem item : items) {
+                    Product product = productRepository.findById(item.getProductId())
+                            .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다. id=" + item.getProductId()));
+    
+                    if (product.getStock() < item.getQuantity()) {
+                        throw new IllegalStateException("재고 부족: productId=" + product.getId());
+                    }
+    
+                    product.decreaseStock(item.getQuantity());
+                    subTotal += product.getPrice() * item.getQuantity();
+                }
+    
+                log.info("[PRODUCT] order={} stock reserved successfully, subTotal={}", orderId, subTotal);
+    
+                // 성공 이벤트 발행
+                publisher.publishEvent(new StockReservedEvent(orderId, subTotal));
+    
+            } catch (Exception e) {
+                log.warn("[PRODUCT] order={} stock reservation failed, reason={}", orderId, e.getMessage());
+                publisher.publishEvent(new StockReserveFailedEvent(orderId, couponId, e.getMessage()));
+            }
+        }
+    
+        @Transactional
+        @DistributedLock(prefix = LockKey.PRODUCT, ids = "#items.![productId]")
+        public void restoreStock(Long orderId, List<OrderSagaItem> items) {
+            for (OrderSagaItem item : items) {
+                Product product = productRepository.findById(item.getProductId())
+                        .orElseThrow(() -> new IllegalArgumentException("상품 없음: " + item.getProductId()));
+                product.increaseStock(item.getQuantity());
+            }
+        }
+    }
+    ```
+    </details>
+
   - `ProductEventHandler`: 상품 차감 및 원가 반환
   - `ProductCompensationHandler`: 차감된 상품 재고 보상
 - Coupon
-  - `CouponCommandService`: 쿠폰 사용/원복 비즈니스 로직
+  - [CouponCommandService](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponCommandService.java): 쿠폰 사용/원복 비즈니스 로직
+    <details><summary>주요 코드</summary>
+  
+    ```java
+    @Service
+    @RequiredArgsConstructor
+    public class CouponCommandService {
+  
+        private final CouponRepository couponRepository;
+        private final ApplicationEventPublisher publisher;
+  
+        @Transactional
+        @DistributedLock(prefix = LockKey.COUPON, ids = "#couponId")
+        public void useCoupon(Long couponId, Long orderId, List<OrderSagaItem> items) {
+            Coupon coupon = couponRepository.findById(couponId)
+                    .orElseThrow(() -> new InvalidCouponException("존재하지 않는 쿠폰입니다. id=" + couponId));
+  
+            try {
+                coupon.use();
+                couponRepository.save(coupon);
+  
+                int discountAmount = coupon.getDiscountAmount();
+                double discountRate = coupon.getDiscountRate();
+  
+                publisher.publishEvent(new CouponUsedEvent(orderId, couponId, discountAmount, discountRate));
+            } catch (Exception e) {
+                publisher.publishEvent(new CouponUseFailedEvent(orderId, couponId, e.getMessage(), items));
+                throw e;
+            }
+        }
+  
+        @Transactional
+        @DistributedLock(prefix = LockKey.COUPON, ids = "#couponId")
+        public void skipCoupon(Long orderId) {
+            publisher.publishEvent(new CouponUsedEvent(orderId, null, 0,0.0));
+        }
+  
+        @Transactional
+        @DistributedLock(prefix = LockKey.COUPON, ids = "#couponId")
+        public void restoreCoupon(Long couponId) {
+            Coupon coupon = couponRepository.findById(couponId)
+                    .orElseThrow(() -> new InvalidCouponException("존재하지 않는 쿠폰입니다. id=" + couponId));
+            coupon.restore();
+            couponRepository.save(coupon);
+        }
+    }
+    ```
+    </details>
+
   - `CouponEventHandler`: 쿠폰 사용 및 할인액 반환
   - `CouponCompensationHandler`: 사용된 쿠폰 원복 보상
-- Balance
-  - `BalanceCommandService`: 잔액 차감/원복 비즈니스 로직 
+  - Balance
+  - [BalanceCommandService](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/balance/application/BalanceCommandService.java): 잔액 차감/원복 비즈니스 로직
+    <details><summary>주요 코드</summary>
+
+    ```java
+    @Service
+    @RequiredArgsConstructor
+    public class BalanceCommandService {
+  
+        private final BalanceRepository balanceRepository;
+        private final ApplicationEventPublisher publisher;
+  
+        @Transactional
+        @DistributedLock(prefix = LockKey.BALANCE, ids = "#userId")
+        public void deductBalance(Long orderId, Long userId, int amount, List<OrderSagaItem> items, Long couponId) {
+            Balance balance = balanceRepository.findByUserId(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("잔액 정보를 찾을 수 없습니다. userId=" + userId));
+  
+            try {
+                balance.use(amount);
+                balanceRepository.save(balance);
+  
+                publisher.publishEvent(new BalanceDeductedEvent(orderId, amount));
+  
+            } catch (Exception e) {
+                publisher.publishEvent(new BalanceDeductionFailedEvent(orderId, items, couponId, e.getMessage()));
+            }
+        }
+  
+        @Transactional
+        @DistributedLock(prefix = LockKey.BALANCE, ids = "#userId")
+        public void restoreBalance(Long userId, int amount) {
+            Balance balance = balanceRepository.findByUserId(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("잔액 정보가 없습니다. userId=" + userId));
+  
+            balance.restore(amount);
+            balanceRepository.save(balance);
+        }
+    }
+    ```
+    </details>
+
   - `BalanceEventHandler`: 최종 금액 차감
   - `BalanceCompensationHandler`: 잔액 원복
     - 주문이 실패하는 경우에 원복인데, 주문이 이미 만들어진 상태이고, 
     - 각각의 도메인이 먼저 수행된 뒤에 동작이기 때문에 불필요할 것으로 보임  
-
 
 ### 기타 집계 및 외부 호출 Mock 핸들러
 
