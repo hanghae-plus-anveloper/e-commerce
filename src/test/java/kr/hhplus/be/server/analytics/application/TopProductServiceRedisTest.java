@@ -84,7 +84,7 @@ public class TopProductServiceRedisTest {
         IntStream.rangeClosed(1, 4).forEach(i -> place(p2, 1)); // 오늘, 4회 * 1개
         IntStream.rangeClosed(1, 3).forEach(i -> place(p3, 1)); // 오늘, 3회 * 1개
         IntStream.rangeClosed(1, 2).forEach(i -> place(p4, 1)); // 오늘, 2회 * 1개
-        IntStream.rangeClosed(1, 1).forEach(i -> place(p5, 1)); // 오늘, 2회 * 1개
+        IntStream.rangeClosed(1, 1).forEach(i -> place(p5, 1)); // 오늘, 1회 * 1개 // 총 15회 주문 완료
 
         List<TopProductView> after = topProductService.getTop5InLast3DaysFromRedisWithoutCache();
         TimeUnit.SECONDS.sleep(2);

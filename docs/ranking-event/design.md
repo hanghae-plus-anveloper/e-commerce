@@ -139,14 +139,118 @@
   - `markIssued`: 상품별 수량 증가 후 완료된 주문 기록, TTL은 집계함수와 동일하게 설정
   - `recordOrders`: 상품 배열 기반으로 `날짜별` 판매량 을 ZSET에 기록
 
-### 외부 전송 Mock 핸들러 구현
-
-- [OrderExternalEventHandler.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/external/mock/application/OrderExternalEventHandler.java)
-- [OrderExternalRedisRepository.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/external/mock/infrastructure/OrderExternalRedisRepository.java)
-
 ### 테스트 성공 상태 확인
 
 ![성공 유지중인 테스트 코드](./assets/002-top-product-success.png)
 - 주문 완료 후 이벤트 기반으로 `TopProductEventHandler`가 정보를 수집하여 Redis 집계가 정상적으로 이루어짐을 확인
 - 기존 테스트(최근 3일간 Top5 조회)는 이벤트 방식 적용 이후에도 그대로 성공 상태 유지
 - 핵심 트랜잭션과 분리된 부가 로직이 이벤트 → 핸들러 구조로 대체되었음에도 기능 동작과 정합성은 변하지 않음
+
+## 집계 및 외부 송신 테스트
+
+### 외부 전송 Mock 핸들러 구현
+
+- [OrderExternalEventHandler.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/external/mock/application/OrderExternalEventHandler.java)
+  - `OrderExternalEventHandler` 외부 Mock API 핸들러: 호출 결과를 Redis에 기록
+    ```java
+    @Slf4j
+    @Component
+    @RequiredArgsConstructor
+    public class OrderExternalEventHandler {
+    
+        private final OrderExternalRedisRepository redisRepository;
+    
+        @Async
+        @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+        public void on(OrderCompletedEvent event) {
+            log.info("[MOCK-EXTERNAL] 주문 완료 이벤트 전송: orderId={}, items={}",
+                    event.orderId(), event.rankingDtoList().size());
+    
+            mockSendToExternalSystem(event);
+        }
+    
+        private void mockSendToExternalSystem(OrderCompletedEvent event) {
+            log.debug("[MOCK-EXTERNAL] 외부 MOCK 이벤트 송신 - orderId={}, userId={}",
+                    event.orderId(), event.userId());
+    
+            redisRepository.recordSent(event.orderId(), event.userId());
+        }
+    }
+    ```
+
+- [OrderExternalRedisRepository.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/external/mock/infrastructure/OrderExternalRedisRepository.java)
+  ```java
+  @Repository
+  @RequiredArgsConstructor
+  public class OrderExternalRedisRepository {
+  
+      private final StringRedisTemplate redisTemplate;
+      private static final String KEY_PREFIX = "EXTERNAL:ORDER:";
+  
+      public void recordSent(Long orderId, Long userId) {
+          String key = KEY_PREFIX + orderId;
+          String value = "sentAt=" + LocalDateTime.now() + ", userId=" + userId;
+          redisTemplate.opsForList().rightPush(key, value);
+      }
+  
+      public Long countRecords(Long orderId) {
+          return redisTemplate.opsForList().size(KEY_PREFIX + orderId);
+      }
+  
+      public void clear(Long orderId) {
+          redisTemplate.delete(KEY_PREFIX + orderId);
+      }
+  }
+  ```
+  
+### 테스트 코드 추가 작성
+
+- Mock 핸들러의 구현 난이도가 낮아 순위 집계 핸들러에 이어서 기능 구현 후 추가 테스트를 작성했습니다.
+
+- [TopProductServiceRedisTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/analytics/application/TopProductServiceRedisTest.java)
+  - 첫 번째 테스트는 위 내용에 포함되어있습니다.
+  - 추가 테스트 조건은 10번 상품을 등록하고 주문하여, 5위에 집계 되는지, 외부 전송 주문이 기록되는 지 확인했습니다.
+  ```java
+  @Test
+  @DisplayName("OrderCompletedEvent 발생 시 두 개의 핸들러(집계, 외부)가 모두 동작한다")
+  void bothHandlersTriggered() throws Exception {
+      Product product = productRepository.save(Product.builder().name("p10").price(100).stock(20).build());
+  
+      Order order = orderFacade.placeOrder(user.getId(), List.of(new OrderItemCommand(product.getId(), 2)), null);
+  
+      Thread.sleep(1000);
+  
+      List<TopProductView> ranking = topProductService.getTop5InLast3DaysFromRedisWithoutCache();
+      printRanking("집계 핸들러 결과", ranking);
+  
+      boolean productRanked = ranking.stream().anyMatch(r -> r.productId().equals(product.getId()));
+      assertThat(productRanked).isTrue();
+  
+      Long externalCount = externalRedisRepository.countRecords(order.getId());
+      printExternal(order.getId(), externalCount);
+  
+      assertThat(externalCount).isGreaterThanOrEqualTo(1L);
+  
+  }
+  ```
+  
+
+### 한 개의 이벤트로 두 개의 핸들러 동시 동작 테스트 성공 결과
+
+![동시 호출 성공 결과](./assets/003-top-product-success.png)
+
+- `OrderCompletedEvent` 발행 후:
+  - `TopProductEventHandler` → Redis 집계 반영 확인
+  - `OrderExternalEventHandler` → 외부 모의 전송 Redis 기록 확인
+- 테스트에서 새로 등록한 상품(`p10`)이 **Top5 집계에 포함**되는 것을 검증
+- 동시에 외부 전송 저장소에서도 주문 ID에 대한 기록이 생성됨을 확인
+- 주문 ID가 `16`인 것은 DB auto-increment 특성으로, 이전 테스트에서 엔티티 삭제가 있어도 시퀀스 값은 초기화되지 않고 증가하기 때문 (정상 동작)
+
+## 테스트 결과 요약
+
+- 핵심 트랜잭션(Order 생성)과 부가 로직(TopProduct 집계, 외부 전송) 분리 이후에도 기존 테스트가 모두 성공적으로 유지됨을 확인
+- `OrderCompletedEvent` 하나로 **두 개의 핸들러**(`TopProductEventHandler`, `OrderExternalEventHandler`)가 **동시에 동작**하여:
+  - Redis 기반 집계에 정상 반영됨
+  - Mock 외부 전송 기록이 Redis 저장소에 정상적으로 누적됨
+- 테스트에서 `p10` 상품 주문 시 Top5 집계에 포함되는 것과, 외부 전송 횟수가 기록되는 것을 검증
+- 인덱스(`orderId=16`)는 DB auto-increment 특성으로, 이전 테스트에서 삭제 후에도 시퀀스 값은 증가하기 때문에 정상 동작으로 판단
