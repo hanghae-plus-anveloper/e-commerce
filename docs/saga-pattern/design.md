@@ -46,6 +46,25 @@
 
 ### 2. 이벤트 흐름 및 도메인 역할
 
+```mermaid
+sequenceDiagram
+    participant Order
+    participant Saga
+    participant Product
+    participant Coupon
+    participant Balance
+
+    Order->>Saga: OrderDraftedEvent
+    Saga->>Order: OrderRequestedEvent
+    Saga->>Product: OrderRequestedEvent
+    Saga->>Coupon: OrderRequestedEvent
+    Product-->>Saga: StockReservedEvent
+    Coupon-->>Saga: CouponUsedEvent
+    Saga->>Balance: OrderCalculatedEvent
+    Balance-->>Saga: BalanceDeductedEvent
+    Saga->>Order: OrderCompletedEvent
+```
+
 - `OrderRequestedEvent(orderId, userId, items, couponId)` 발행
   - 각 도메인이 이를 구독하여 각각의 트렌젝션에서 로직 실행
   - `Product` 도메인: 재고 확인 및 차감 시도 
@@ -56,7 +75,8 @@
     - 실패 시 `CouponUseFailedEvent(orderId, reason)` 발행
     - 미사용 시에는 `CouponSkippedEvent(orderId)` 발행 (혹은 0원으로 성공 처리)
   - `Balance` 도메인: 총액 및 차감액을 바탕으로 잔액 차감
-    - 성공 이벤트(`PriceQuotedEvent`, `CouponUsedEvent`/`CouponSkippedEvent`)를 기반으로 최종 결제 금액 계산
+    - ~~성공 이벤트(`PriceQuotedEvent`, `CouponUsedEvent`/`CouponSkippedEvent`)를 기반으로 최종 결제 금액 계산~~
+    - `OrderSagaHandler`가 발행한 `OrderCalculatedEvent`에 의해 잔액 차감 수행
     - 결제 가능 여부 확인 후 차감
     - 성공 시 `BalanceDeductedEvent(orderId, totalAmount)` 발행
     - 실패 시 `BalanceDeductionFailedEvent(orderId, reason)` 발행
@@ -69,7 +89,18 @@
   - 최종적으로 `OrderCompletedEvent(orderId)` 발행
     - 집계, 외부 전송 핸들러가 이를 수집 
 
+
 ### 3. 보상 트랜잭션 설계 - Compensation
+
+```mermaid
+stateDiagram-v2
+    [*] --> Draft
+    Draft --> Pending: OrderRequested
+    Pending --> Paid: BalanceDeducted
+    Pending --> Failed: StockReserveFailed / CouponUseFailed / BalanceDeductionFailed
+    Failed --> Restored: CompensationHandlers
+    Restored --> Cancelled
+```
 
 - 각 도메인에서 실패 시 **원복 이벤트**를 발행
   - `Product`: `StockReserveFailedEvent` → 이미 차감된 재고 복구(트랜젝션에 의한 롤백), 쿠폰 사용 원복
@@ -112,9 +143,78 @@
 
 ### 상태 저장소 구성
 
-- `OrderSagaState`: 주문 Saga 상태값
-- `OrderSagaRepository`: Saga 상태 저장소
-- `OrderSagaEventStatus(enum: PENDING, SUCCESS, FAILED, CANCELED, RESTORED)`
+- [OrderSagaRepository](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/saga/domain/OrderSagaRepository.java): Saga 상태 저장소
+- [OrderSagaEventStatus](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/saga/domain/OrderSagaEventStatus.java) (enum: PENDING, SUCCESS, FAILED, CANCELED, RESTORED)
+- [OrderSagaState](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/saga/domain/OrderSagaState.java): 주문 Saga 상태값
+  <details><summary>주요 코드</summary>
+  
+  ```java
+  @Entity
+  @Table(name = "order_saga_state")
+  @Getter
+  @NoArgsConstructor(access = AccessLevel.PROTECTED)
+  @AllArgsConstructor
+  @Builder
+  public class OrderSagaState {
+  
+      @Id
+      private Long orderId;   // 주문 ID (Order 엔티티 PK와 동일)
+  
+      private Long userId;
+  
+      @ElementCollection
+      @CollectionTable(name = "order_saga_items", joinColumns = @JoinColumn(name = "order_id"))
+      private List<OrderSagaItem> items;
+  
+      private Long couponId;
+  
+      // 각 도메인 상태
+      @Enumerated(EnumType.STRING)
+      private OrderSagaEventStatus productReserved;
+  
+      @Enumerated(EnumType.STRING)
+      private OrderSagaEventStatus couponApplied;
+  
+      @Enumerated(EnumType.STRING)
+      private OrderSagaEventStatus balanceCharged;
+  
+      // 금액 정보
+      private Integer subTotalAmount;
+      private Integer discountAmount;
+      private Integer totalAmount;
+  
+      public void markProductReservedSuccess(int subTotalAmount) {
+          this.productReserved = OrderSagaEventStatus.SUCCESS;
+          this.subTotalAmount = subTotalAmount;
+      }
+  
+      public void markCouponAppliedSuccess(int discountAmount) {
+          this.couponApplied = OrderSagaEventStatus.SUCCESS;
+          this.discountAmount = discountAmount;
+      }
+  
+      public void markBalanceChargedSuccess(int totalAmount) {
+          this.balanceCharged = OrderSagaEventStatus.SUCCESS;
+          this.totalAmount = totalAmount;
+      }
+  
+      public void markFailedDomain(String domain) {
+          switch (domain) {
+              case "PRODUCT" -> this.productReserved = OrderSagaEventStatus.FAILED;
+              case "COUPON" -> this.couponApplied = OrderSagaEventStatus.FAILED;
+              case "BALANCE" -> this.balanceCharged = OrderSagaEventStatus.FAILED;
+          }
+      }
+  
+      public boolean isReadyForCalculation() {
+          return productReserved == OrderSagaEventStatus.SUCCESS
+                  && couponApplied == OrderSagaEventStatus.SUCCESS
+                  && subTotalAmount != null
+                  && discountAmount != null;
+      }
+  }
+  ```
+  </details>
 
 
 ### 도메인 이벤트
@@ -122,6 +222,7 @@
 - Order
   - `OrderDraftedEvent`: 초안 생성됨 이벤트, 자기 참조용
   - `OrderRequestedEvent`: 주문 요청됨 이벤트, 각 도메인 참조용
+  - `OrderCalculatedEvent`: [추가] 상품 총액과 쿠폰 차감액이 성공적으로 반환되었을 때, `OrderSagaHandler.tryTriggerOrderCalculated`에 의해 발행 
   - `OrderCompletedEvent`: 주문 완료 이벤트
   - `OrderFailedEvent`: 주문 실패 이벤트
 - Product
@@ -138,12 +239,185 @@
 
 ### Saga 상태 머신 핸들러
 
-- `OrderSagaHandler`: Saga의 상태 관리 메타 데이터 및 부가 정보 관리
+- [OrderSagaHandler](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/saga/application/OrderSagaHandler.java): Saga의 상태 관리 메타 데이터 및 부가 정보 관리
+  <details><summary>주요 코드</summary>
+  
+  ```java
+  @Slf4j
+  @Component
+  @RequiredArgsConstructor
+  public class OrderSagaHandler {
+  
+      private final ApplicationEventPublisher publisher;
+      private final OrderSagaRepository sagaRepository;
+  
+      // 주문 조안 생성 시 감지 후 저장
+      @Async
+      @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+      public void on(OrderDraftedEvent event) {
+          // 초안 저장 시 초기 Saga 상태 저장
+          OrderSagaState sagaState = OrderSagaState.builder()
+                  .orderId(event.orderId())
+                  .userId(event.userId())
+                  .items(event.items())
+                  .couponId(event.couponId())
+                  .productReserved(OrderSagaEventStatus.PENDING)
+                  .couponApplied(OrderSagaEventStatus.PENDING)
+                  .balanceCharged(OrderSagaEventStatus.PENDING)
+                  .build();
+  
+          sagaRepository.save(sagaState);
+          log.info("[SAGA] Drafted order={}, user={} saga initialized", event.orderId(), event.userId());
+  
+          // Saga 저장소 생성 후 각 도메인별 주문 요청 이벤트 발행
+          publisher.publishEvent(
+                  new OrderRequestedEvent(event.orderId(), event.userId(), event.items(), event.couponId())
+          );
+      }
+  
+      private void tryTriggerOrderCalculated(OrderSagaState saga) {
+          if (saga.isReadyForCalculation()) {
+              int total = saga.getSubTotalAmount() - saga.getDiscountAmount();
+              publisher.publishEvent(new OrderCalculatedEvent(
+                      saga.getOrderId(),
+                      saga.getUserId(),
+                      total,
+                      saga.getItems(),
+                      saga.getCouponId()
+              ));
+              log.info("[SAGA] order={} calculation prepared → total={}", saga.getOrderId(), total);
+          }
+      }
+  
+      // 재고 차감 상태 업데이트
+      @Async
+      @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+      public void on(StockReservedEvent event) {
+          sagaRepository.findById(event.orderId()).ifPresent(saga -> {
+              saga.markProductReservedSuccess(event.subTotalAmount());
+              sagaRepository.save(saga);
+              log.info("[SAGA] order={} product reserved success, subtotal={}", event.orderId(), event.subTotalAmount());
+              tryTriggerOrderCalculated(saga);
+          });
+      }
+  
+      // 쿠폰 사용 상태 업데이트
+      @Async
+      @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+      public void on(CouponUsedEvent event) {
+          sagaRepository.findById(event.orderId()).ifPresent(saga -> {
+              saga.markCouponAppliedSuccess(event.discountAmount());
+              sagaRepository.save(saga);
+              log.info("[SAGA] order={} coupon used success, discount={}", event.orderId(), event.discountAmount());
+              tryTriggerOrderCalculated(saga);
+          });
+      }
+  
+      // 잔액 차감 완료 상태 업데이트
+      @Async
+      @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+      public void on(BalanceDeductedEvent event) {
+          sagaRepository.findById(event.orderId()).ifPresent(saga -> {
+              saga.markBalanceChargedSuccess(event.totalAmount());
+              sagaRepository.save(saga);
+              log.info("[SAGA] order={} balance deducted success, total={}", event.orderId(), event.totalAmount());
+          });
+      }
+  
+      // 상품 재고 차감 실패 상태 업데이트
+      @Async
+      @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+      public void on(StockReserveFailedEvent event) {
+          sagaRepository.findById(event.orderId()).ifPresent(saga -> {
+              saga.markFailedDomain("PRODUCT");
+              sagaRepository.save(saga);
+              log.warn("[SAGA] order={} product reserve failed, reason={}", event.orderId(), event.reason());
+          });
+      }
+  
+      // 쿠폰 사용 실패 상태 업데이트
+      @Async
+      @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+      public void on(CouponUseFailedEvent event) {
+          sagaRepository.findById(event.orderId()).ifPresent(saga -> {
+              saga.markFailedDomain("COUPON");
+              sagaRepository.save(saga);
+              log.warn("[SAGA] order={} coupon use failed, reason={}", event.orderId(), event.reason());
+          });
+      }
+  
+      // 잔액 차감 실패 상태 업데이트
+      @Async
+      @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+      public void on(BalanceDeductionFailedEvent event) {
+          sagaRepository.findById(event.orderId()).ifPresent(saga -> {
+              saga.markFailedDomain("BALANCE");
+              sagaRepository.save(saga);
+              log.warn("[SAGA] order={} balance deduction failed, reason={}", event.orderId(), event.reason());
+          });
+      }
+  }
+  ```
+  </details>
+
 
 ### 주문 생성 주체
 
-- `OrderCommandService`
-- `OrderEventHandler`
+- [OrderCommandService](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/order/application/OrderCommandService.java): 주문 초기값 생성
+  <details><summary>주요 코드</summary>
+  
+  ```java
+  @Service
+  @RequiredArgsConstructor
+  public class OrderCommandService {
+  
+      private final OrderRepository orderRepository;
+      private final ApplicationEventPublisher publisher;
+  
+      @Transactional
+      public Order createDraft(Long userId, List<OrderItemCommand> items, Long couponId) {
+  
+          Order order = Order.draft(userId, couponId);
+          orderRepository.save(order);
+  
+          // Saga 초기화를 위해 DraftedEvent 발행
+          publisher.publishEvent(new OrderDraftedEvent(
+                  order.getId(),
+                  order.getUserId(),
+                  OrderSagaMapper.toSagaItems(items),
+                  couponId
+          ));
+  
+          return order;
+      }
+  }
+  ```
+  </details>
+
+- [OrderEventHandler](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/order/application/OrderEventHandler.java): OrderSagaHandler에 의해 발행된 OrderRequestedEvent 감지하여 `OrderStatus.PENDING`으로 전환
+  <details><summary>주요코드</summary>
+  
+  ```java
+  @Slf4j
+  @Component
+  @RequiredArgsConstructor
+  public class OrderEventHandler {
+  
+      private final OrderRepository orderRepository;
+  
+      @Async
+      @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+      public void on(OrderRequestedEvent event) {
+          orderRepository.findById(event.orderId()).ifPresent(order -> {
+              order.markPending();
+              orderRepository.save(order);
+              log.info("[ORDER] order={} moved to PENDING", event.orderId());
+          });
+      }
+  }
+  ```
+  </details>
+
 
 ### 각 도메인별 핸들러 및 테스트
 
@@ -168,5 +442,48 @@
 - `TopProductEventHandler` (구현됨)
 - `OrderExternalEventHandler` (구현됨)
 
-## 기능 구현
+## 기능 구현 
+
+```mermaid
+flowchart TD
+    A[OrderCommandService] -->|OrderDraftedEvent| B[OrderSagaHandler]
+    B -->|OrderRequestedEvent| C[ProductCommandService]
+    B -->|OrderRequestedEvent| D[CouponCommandService]
+    C -->|StockReservedEvent| B
+    D -->|CouponUsedEvent| B
+    B -->|OrderCalculatedEvent| E[BalanceCommandService]
+    E -->|BalanceDeductedEvent| B
+    B -->|OrderCompletedEvent| F[외부 핸들러]
+```
+
+- 아직 일부 구현
+
+## 리뷰 포인트 1
+
+> 설계는 완료되었으나, 코드는 각 도메인 별 이벤트 정의, CommandService, Handler, CompensationHandler 를 배치만 하고, 아직 제대로 구현되진 않았습니다.
+
+- 현재 설계서 상에서는 각 도메인이 요청이나 실패 이벤트를 직접 받아서 스스로 차감이나 사용을 처리하는 `Choreography` 기반으로 생각했습니다.
+- 그런데 실제 구현을 해보니, `SagaHandler`가 각 도메인의 반환 여부를 모아서 관리하는 `Orchestrator` 역할을 하고 있습니다.
+- 실패 이벤트는 각 도메인이 직접 수신해서 보상 로직을 실행하도록 했고, `Product`와 `Coupon`은 `OrderRequestEvent`를 병렬적으로 처리하도록 했습니다.
+- 이렇게 구현하다 보니 `Choreography`와 `Orchestrator` 방식이 섞인 하이브리드 형태가 된 것 같습니다.
+- 이런 하이브리드 형태도 가능한 것인지 궁금합니다.
+
+## 리뷰 포인트 2
+
+> 또 다시 계층에 접근 하는 문제를 겪고 있습니다.
+
+- 다른 도메인의 실패 이벤트를 수신했을 때, `CompensationHandler`에서 `orderId`를 기준으로 `SagaRepository`를 조회해 내 작업이 실제로 끝났는지 확인하려고 구상 중입니다.
+- `CompensationHandler`는 각 도메인의 `application` 계층에 배치했고, `OrderSagaRepository`는 `saga.domain` 계층에 `JPA`로 선언해둔 상태입니다.
+- 이 경우, `CompensationHandler`가 `saga.domain`에 접근하는 구조가 되는데, 이는 곧 **다른 도메인의 domain 계층에 접근하는 모양새**라 적용을 망설이고 있습니다.
+- 이런 상황에서 어떤 방식으로 풀어내는 것이 좋은지 궁금합니다.
+
+## 회고
+
+- 설계서에 OrderSagaState를 JPA로 DB에 저장하는 것으로 작성하였고, OrderSageRepository를 코드로 구현했습니다. 
+- OrderId로 조회하려면 각 CommandService에서 sagaRepository를 직접 확인하거나, 하나의 접근 지점을 따로 만들어야 할 것 같습니다.
+- 이벤트에도 일단 orderId 외에 couponId, items 들을 가지고 있으면서, fail 이벤트 발생 시 다른 도메인이 그 이벤트에 담긴 값을 보고 있는데,
+- 이벤트에 담긴 값보다 sagaRepository에 저장된 state를 찾아서 원복하는게 더 원본 데이터를 보는 것 같다고 느껴졌습니다.
+- 이벤트를 리스너가 못잡거나, 락으로 인해 미뤄지는 경우 이벤트를 재발행하는 로직이 동작해야하는데, 그때 원천 데이터를 담을 소스라고 생각되었습니다.
+- 클래스 파일들과 있어야 할 함수의 기본 기능 정도만 일단 넣어두고 테스트 코드를 미처 작성하지 못하고 제출합니다.
+- 차주에 설계서를 바탕으로 Saga 저장소를 확실히 조회하는 구조로 다시 구현해보도록 하겠습니다.
 
