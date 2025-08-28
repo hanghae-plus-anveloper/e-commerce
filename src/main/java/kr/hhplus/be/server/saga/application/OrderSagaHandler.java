@@ -4,6 +4,7 @@ import kr.hhplus.be.server.common.event.balance.BalanceDeductedEvent;
 import kr.hhplus.be.server.common.event.balance.BalanceDeductionFailedEvent;
 import kr.hhplus.be.server.common.event.coupon.CouponUseFailedEvent;
 import kr.hhplus.be.server.common.event.coupon.CouponUsedEvent;
+import kr.hhplus.be.server.common.event.order.OrderCalculatedEvent;
 import kr.hhplus.be.server.common.event.order.OrderDraftedEvent;
 import kr.hhplus.be.server.common.event.order.OrderRequestedEvent;
 import kr.hhplus.be.server.common.event.product.StockReserveFailedEvent;
@@ -51,6 +52,20 @@ public class OrderSagaHandler {
         );
     }
 
+    private void tryTriggerOrderCalculated(OrderSagaState saga) {
+        if (saga.isReadyForCalculation()) {
+            int total = saga.getSubTotalAmount() - saga.getDiscountAmount();
+            publisher.publishEvent(new OrderCalculatedEvent(
+                    saga.getOrderId(),
+                    saga.getUserId(),
+                    total,
+                    saga.getItems(),
+                    saga.getCouponId()
+            ));
+            log.info("[SAGA] order={} calculation prepared → total={}", saga.getOrderId(), total);
+        }
+    }
+
     // 재고 차감 상태 업데이트
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -59,6 +74,7 @@ public class OrderSagaHandler {
             saga.markProductReservedSuccess(event.subTotalAmount());
             sagaRepository.save(saga);
             log.info("[SAGA] order={} product reserved success, subtotal={}", event.orderId(), event.subTotalAmount());
+            tryTriggerOrderCalculated(saga);
         });
     }
 
@@ -70,6 +86,7 @@ public class OrderSagaHandler {
             saga.markCouponAppliedSuccess(event.discountAmount());
             sagaRepository.save(saga);
             log.info("[SAGA] order={} coupon used success, discount={}", event.orderId(), event.discountAmount());
+            tryTriggerOrderCalculated(saga);
         });
     }
 

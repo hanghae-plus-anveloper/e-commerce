@@ -19,10 +19,7 @@ public class OrderSagaState {
     private Long userId;
 
     @ElementCollection
-    @CollectionTable(
-            name = "order_saga_items",
-            joinColumns = @JoinColumn(name = "order_id")
-    )
+    @CollectionTable(name = "order_saga_items", joinColumns = @JoinColumn(name = "order_id"))
     private List<OrderSagaItem> items;
 
     private Long couponId;
@@ -63,5 +60,12 @@ public class OrderSagaState {
             case "COUPON" -> this.couponApplied = OrderSagaEventStatus.FAILED;
             case "BALANCE" -> this.balanceCharged = OrderSagaEventStatus.FAILED;
         }
+    }
+
+    public boolean isReadyForCalculation() {
+        return productReserved == OrderSagaEventStatus.SUCCESS
+                && couponApplied == OrderSagaEventStatus.SUCCESS
+                && subTotalAmount != null
+                && discountAmount != null;
     }
 }

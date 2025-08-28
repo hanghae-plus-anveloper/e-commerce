@@ -4,7 +4,7 @@ import kr.hhplus.be.server.saga.domain.OrderSagaItem;
 
 import java.util.List;
 
-public record OrderFailedEvent(
+public record OrderCalculatedEvent(
         Long orderId,
         Long userId,
         int totalAmount,
