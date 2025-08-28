@@ -1,6 +1,6 @@
 package kr.hhplus.be.server.analytics.application;
 
-import kr.hhplus.be.server.common.event.OrderCompletedEvent;
+import kr.hhplus.be.server.common.event.order.OrderCompletedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;

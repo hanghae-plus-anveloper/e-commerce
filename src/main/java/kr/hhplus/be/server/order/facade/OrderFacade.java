@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import kr.hhplus.be.server.analytics.application.TopProductRankingDto;
 // import kr.hhplus.be.server.analytics.application.TopProductService;
 import kr.hhplus.be.server.balance.application.BalanceService;
-import kr.hhplus.be.server.common.event.OrderCompletedEvent;
+import kr.hhplus.be.server.common.event.order.OrderCompletedEvent;
 import kr.hhplus.be.server.common.lock.DistributedLock;
 import kr.hhplus.be.server.common.lock.LockKey;
 import kr.hhplus.be.server.coupon.application.CouponService;

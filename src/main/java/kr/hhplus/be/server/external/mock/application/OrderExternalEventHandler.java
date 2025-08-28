@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import kr.hhplus.be.server.common.event.OrderCompletedEvent;
+import kr.hhplus.be.server.common.event.order.OrderCompletedEvent;
 import kr.hhplus.be.server.external.mock.infrastructure.OrderExternalRedisRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
