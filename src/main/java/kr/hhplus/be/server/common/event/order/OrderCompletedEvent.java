@@ -1,4 +1,4 @@
-package kr.hhplus.be.server.common.event;
+package kr.hhplus.be.server.common.event.order;
 
 import kr.hhplus.be.server.analytics.application.TopProductRankingDto;
 
