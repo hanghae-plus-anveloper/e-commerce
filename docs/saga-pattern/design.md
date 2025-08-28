@@ -116,9 +116,6 @@
 - `OrderSagaRepository`: Saga 상태 저장소
 - `OrderSagaEventStatus(enum: PENDING, SUCCESS, FAILED, CANCELED, RESTORED)`
 
-### Saga 상태 머신 핸들러
-
-- `OrderSagaHandler`: Saga의 상태 관리 메타 데이터 및 부가 정보 관리
 
 ### 도메인 이벤트
 
@@ -129,15 +126,19 @@
   - `OrderFailedEvent`: 주문 실패 이벤트
 - Product
   - `StockReservedEvent`: 재고 차감 완료 이벤트
-  - `PriceQuotedEvent`: 주문 총액 이벤트(재고 차감 이벤트와 통합 가능)
+  - `PriceQuotedEvent`: 주문 총액 이벤트(재고 차감 이벤트와 통합 가능) - 제외
   - `StockReserveFailedEvent`: 재고 차감 실패 이벤트 
 - Coupon
   - `CouponUsedEvent`: 쿠폰 사용 이벤트 + 할인액 반환
-  - `CouponSkippedEvent`: 쿠폰 미사용 이벤트(쿠폰 0원 사용 이벤트로 도 가능 할 것으로 보임)
+  - `CouponSkippedEvent`: 쿠폰 미사용 이벤트(쿠폰 0원 사용 이벤트로 도 가능 할 것으로 보임) - 제외
   - `CouponUseFailedEvent`: 쿠폰 사용 실패 이벤트
 - Balance
   - `BalanceDeductedEvent`: 잔액 차감 이벤트
   - `BalanceDeductionFailedEvent`: 잔액 차감 실패 이벤트
+
+### Saga 상태 머신 핸들러
+
+- `OrderSagaHandler`: Saga의 상태 관리 메타 데이터 및 부가 정보 관리
 
 ### 주문 생성 주체
 
