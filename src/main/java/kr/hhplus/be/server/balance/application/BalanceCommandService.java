@@ -4,6 +4,8 @@ import kr.hhplus.be.server.balance.domain.Balance;
 import kr.hhplus.be.server.balance.domain.BalanceRepository;
 import kr.hhplus.be.server.common.event.balance.BalanceDeductedEvent;
 import kr.hhplus.be.server.common.event.balance.BalanceDeductionFailedEvent;
+import kr.hhplus.be.server.common.lock.DistributedLock;
+import kr.hhplus.be.server.common.lock.LockKey;
 import kr.hhplus.be.server.saga.domain.OrderSagaItem;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -20,6 +22,7 @@ public class BalanceCommandService {
     private final ApplicationEventPublisher publisher;
 
     @Transactional
+    @DistributedLock(prefix = LockKey.BALANCE, ids = "#userId")
     public void deductBalance(Long orderId, Long userId, int amount, List<OrderSagaItem> items, Long couponId) {
         Balance balance = balanceRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("잔액 정보를 찾을 수 없습니다. userId=" + userId));
@@ -36,6 +39,7 @@ public class BalanceCommandService {
     }
 
     @Transactional
+    @DistributedLock(prefix = LockKey.BALANCE, ids = "#userId")
     public void restoreBalance(Long userId, int amount) {
         Balance balance = balanceRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("잔액 정보가 없습니다. userId=" + userId));

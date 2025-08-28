@@ -2,6 +2,8 @@ package kr.hhplus.be.server.coupon.application;
 
 import kr.hhplus.be.server.common.event.coupon.CouponUseFailedEvent;
 import kr.hhplus.be.server.common.event.coupon.CouponUsedEvent;
+import kr.hhplus.be.server.common.lock.DistributedLock;
+import kr.hhplus.be.server.common.lock.LockKey;
 import kr.hhplus.be.server.coupon.domain.Coupon;
 import kr.hhplus.be.server.coupon.domain.CouponRepository;
 import kr.hhplus.be.server.coupon.exception.InvalidCouponException;
@@ -21,6 +23,7 @@ public class CouponCommandService {
     private final ApplicationEventPublisher publisher;
 
     @Transactional
+    @DistributedLock(prefix = LockKey.COUPON, ids = "#couponId")
     public void useCoupon(Long couponId, Long orderId, List<OrderSagaItem> items) {
         Coupon coupon = couponRepository.findById(couponId)
                 .orElseThrow(() -> new InvalidCouponException("존재하지 않는 쿠폰입니다. id=" + couponId));
@@ -40,11 +43,13 @@ public class CouponCommandService {
     }
 
     @Transactional
+    @DistributedLock(prefix = LockKey.COUPON, ids = "#couponId")
     public void skipCoupon(Long orderId) {
         publisher.publishEvent(new CouponUsedEvent(orderId, null, 0,0.0));
     }
 
     @Transactional
+    @DistributedLock(prefix = LockKey.COUPON, ids = "#couponId")
     public void restoreCoupon(Long couponId) {
         Coupon coupon = couponRepository.findById(couponId)
                 .orElseThrow(() -> new InvalidCouponException("존재하지 않는 쿠폰입니다. id=" + couponId));

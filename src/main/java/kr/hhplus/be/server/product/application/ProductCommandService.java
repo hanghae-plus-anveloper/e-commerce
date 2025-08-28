@@ -3,6 +3,8 @@ package kr.hhplus.be.server.product.application;
 
 import kr.hhplus.be.server.common.event.product.StockReserveFailedEvent;
 import kr.hhplus.be.server.common.event.product.StockReservedEvent;
+import kr.hhplus.be.server.common.lock.DistributedLock;
+import kr.hhplus.be.server.common.lock.LockKey;
 import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.product.domain.ProductRepository;
 import kr.hhplus.be.server.saga.domain.OrderSagaItem;
@@ -23,6 +25,7 @@ public class ProductCommandService {
     private final ApplicationEventPublisher publisher;
 
     @Transactional
+    @DistributedLock(prefix = LockKey.PRODUCT, ids = "#items.![productId]")
     public void reserveStock(Long orderId, List<OrderSagaItem> items, Long couponId) {
         try {
             int subTotal = 0;
@@ -51,6 +54,7 @@ public class ProductCommandService {
     }
 
     @Transactional
+    @DistributedLock(prefix = LockKey.PRODUCT, ids = "#items.![productId]")
     public void restoreStock(Long orderId, List<OrderSagaItem> items) {
         for (OrderSagaItem item : items) {
             Product product = productRepository.findById(item.getProductId())

@@ -1,6 +1,8 @@
 package kr.hhplus.be.server.order.application;
 
 import kr.hhplus.be.server.common.event.order.OrderDraftedEvent;
+import kr.hhplus.be.server.common.lock.DistributedLock;
+import kr.hhplus.be.server.common.lock.LockKey;
 import kr.hhplus.be.server.order.domain.Order;
 import kr.hhplus.be.server.order.domain.OrderRepository;
 import kr.hhplus.be.server.order.facade.OrderItemCommand;
@@ -20,6 +22,7 @@ public class OrderCommandService {
     private final ApplicationEventPublisher publisher;
 
     @Transactional
+    @DistributedLock(prefix = LockKey.ORDER, ids = "#userId")
     public Order createDraft(Long userId, List<OrderItemCommand> items, Long couponId) {
 
         Order order = Order.draft(userId, couponId);
