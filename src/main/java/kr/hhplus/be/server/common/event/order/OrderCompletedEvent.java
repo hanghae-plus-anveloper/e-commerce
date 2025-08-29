@@ -1,12 +1,6 @@
 package kr.hhplus.be.server.common.event.order;
 
-import kr.hhplus.be.server.analytics.application.TopProductRankingDto;
-
 import java.util.List;
 
-public record OrderCompletedEvent(
-        Long orderId,
-        Long userId,
-        List<TopProductRankingDto> rankingDtoList
-) {
+public record OrderCompletedEvent(Long orderId, Long userId, List<OrderLineSummary> lines) {
 }

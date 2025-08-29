@@ -7,10 +7,10 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import kr.hhplus.be.server.analytics.application.TopProductRankingDto;
 // import kr.hhplus.be.server.analytics.application.TopProductService;
 import kr.hhplus.be.server.balance.application.BalanceService;
 import kr.hhplus.be.server.common.event.order.OrderCompletedEvent;
+import kr.hhplus.be.server.common.event.order.OrderLineSummary;
 import kr.hhplus.be.server.common.lock.DistributedLock;
 import kr.hhplus.be.server.common.lock.LockKey;
 import kr.hhplus.be.server.coupon.application.CouponService;
@@ -66,13 +66,13 @@ public class OrderFacade {
 
         Order order = orderService.createOrder(user, items, total);
 
-        List<TopProductRankingDto> rankingDtos = items.stream()
-                .map(i -> new TopProductRankingDto(i.getProduct().getId().toString(), i.getQuantity()))
+        List<OrderLineSummary> lines = items.stream()
+                .map(i -> new OrderLineSummary(i.getProduct().getId(), i.getQuantity()))
                 .toList();
 
         // 비동기로 요청 > 이벤트 방식으로 수정예정
         // topProductService.recordOrdersAsync(rankingDtos);
-        eventPublisher.publishEvent(new OrderCompletedEvent(order.getId(), userId, rankingDtos));
+        eventPublisher.publishEvent(new OrderCompletedEvent(order.getId(), userId, lines));
 
         return order;
     }

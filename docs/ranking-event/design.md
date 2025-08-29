@@ -41,17 +41,7 @@
 
 - [OrderCompletedEvent.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/common/event/OrderCompletedEvent.java)
   ```java
-  package kr.hhplus.be.server.common.event;
-  
-  import kr.hhplus.be.server.analytics.application.TopProductRankingDto;
-  
-  import java.util.List;
-  
-  public record OrderCompletedEvent(
-          Long orderId,
-          Long userId,
-          List<TopProductRankingDto> rankingDtoList
-  ) {
+  public record OrderCompletedEvent(Long orderId, Long userId, List<OrderLineSummary> lines) {
   }
   ```
   - 주문 생성 성공 이벤트
@@ -61,15 +51,23 @@
   @Component
   @RequiredArgsConstructor
   public class TopProductEventHandler {
-  
-    private final TopProductService topProductService;
-  
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void on(OrderCompletedEvent event) {
-      topProductService.recordOrdersAsync(event.orderId(), event.rankingDtoList());
-    }
-  } 
+
+      private final TopProductService topProductService;
+
+      @Async
+      @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+      public void on(OrderCompletedEvent event) {
+          List<TopProductRankingDto> dtos = event.lines().stream()
+                  .map(this::toDto)
+                  .toList();
+          topProductService.recordOrdersAsync(event.orderId(), dtos);
+      }
+
+      private TopProductRankingDto toDto(OrderLineSummary line) {
+          String pid = (line.productId() == null) ? null : line.productId().toString();
+          return new TopProductRankingDto(pid, line.quantity());
+      }
+  }
   ```
   - `AFTER_COMMIT` 에 의해 트랜젝션이 커밋 되고 나서 이벤트 동작으로 구현
   - 주문 생성 함수의 `OrderCompletedEvent`를 수집하여 `TopProductService`에 집계 요청
@@ -164,7 +162,7 @@
         @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
         public void on(OrderCompletedEvent event) {
             log.info("[MOCK-EXTERNAL] 주문 완료 이벤트 전송: orderId={}, items={}",
-                    event.orderId(), event.rankingDtoList().size());
+                    event.orderId(), event.lines().size());
     
             mockSendToExternalSystem(event);
         }

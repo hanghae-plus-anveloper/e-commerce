@@ -21,7 +21,7 @@ public class OrderExternalEventHandler {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(OrderCompletedEvent event) {
         log.info("[MOCK-EXTERNAL] 주문 완료 이벤트 전송: orderId={}, items={}",
-                event.orderId(), event.rankingDtoList().size());
+                event.orderId(), event.lines().size());
 
         mockSendToExternalSystem(event);
     }
