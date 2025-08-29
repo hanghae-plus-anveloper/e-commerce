@@ -17,6 +17,7 @@ import kr.hhplus.be.server.analytics.domain.TopProductNativeRepository;
 import kr.hhplus.be.server.analytics.domain.TopProductView;
 import kr.hhplus.be.server.analytics.infrastructure.TopProductRedisRepository;
 import kr.hhplus.be.server.common.cache.CacheNames;
+import kr.hhplus.be.server.common.event.order.OrderLineSummary;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -50,12 +51,12 @@ public class TopProductService {
 
     // Redis 기반 코드 추가
     @Async
-    public void recordOrdersAsync(Long orderId, List<TopProductRankingDto> items) {
+    public void recordOrdersAsync(Long orderId, List<OrderLineSummary> lines) {
         if (redisRepository.isAlreadyIssued(orderId)) {
             return;
         }
         try {
-            redisRepository.recordOrders(items.stream().map(TopProductMapper::toRecord).toList());
+            redisRepository.recordOrders(lines.stream().map(TopProductMapper::toRecord).toList());
             redisRepository.markIssued(orderId);
         } catch (Exception ignored) {
         }

@@ -57,15 +57,7 @@
       @Async
       @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
       public void on(OrderCompletedEvent event) {
-          List<TopProductRankingDto> dtos = event.lines().stream()
-                  .map(this::toDto)
-                  .toList();
-          topProductService.recordOrdersAsync(event.orderId(), dtos);
-      }
-
-      private TopProductRankingDto toDto(OrderLineSummary line) {
-          String pid = (line.productId() == null) ? null : line.productId().toString();
-          return new TopProductRankingDto(pid, line.quantity());
+          topProductService.recordOrdersAsync(event.orderId(), event.lines());
       }
   }
   ```
@@ -79,12 +71,12 @@
   public class TopProductService {
       /* ... */
       @Async
-      public void recordOrdersAsync(Long orderId, List<TopProductRankingDto> items) {
+      public void recordOrdersAsync(Long orderId, List<OrderLineSummary> lines) {
           if (redisRepository.isAlreadyIssued(orderId)) {
               return;
           }
           try {
-              redisRepository.recordOrders(items.stream().map(TopProductMapper::toRecord).toList());
+              redisRepository.recordOrders(lines.stream().map(TopProductMapper::toRecord).toList());
               redisRepository.markIssued(orderId);
           } catch (Exception ignored) {
           }
