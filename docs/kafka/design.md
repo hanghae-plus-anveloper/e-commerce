@@ -105,8 +105,213 @@ docker compose -f docker-compose-kafka.yml exec kafka \
 </details>
 
 
-# E-commerce Kafka 설계서
+# E-commerce Kafka 실시간 주문
 
-## 시퀀스 다이어그램
+## Kafka 주문 메세지 발행
+
+### 목적
+
+> 주문 생성 시 Kafka에 메세지를 발행할 수 있다.
+
+### 설계 방향
+
+- 주문 생성은 기존 `OrderFacade`의 주문 생성 트랜젝션 커밋후 실행
+- OrderCompletedEvent를 발행하여 핸들러에서 Kafka 메세지를 발행
+
+### 주요 코드
+
+- [OrderCompletedMessage.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/kafka/message/OrderCompletedMessage.java)
+  ```java
+  public record OrderCompletedMessage(
+          String orderId,
+          String userId,
+          List<Line> lines,
+          Instant completedAt
+  ) {
+      public record Line(Long productId, int quantity) {}
+  }
+  ```
+  - 주문완료 시 kafka에 적재할 메세지 스키마
+
+- [KafkaTopics.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/kafka/KafkaTopics.java)
+  ```java
+  @Component
+  public class KafkaTopics {
+  
+    @Bean
+    NewTopic orderCompletedTopic(
+            @Value("${app.kafka.topics.order-completed}") String name,
+            @Value("${app.kafka.partitions.order-completed:3}") int partitions
+    ) {
+      return TopicBuilder.name(name).partitions(partitions).replicas(1).build();
+    }
+    
+    @Bean
+    NewTopic couponIssuedTopic(
+            @Value("${app.kafka.topics.coupon-issued}") String name,
+            @Value("${app.kafka.partitions.coupon-issued:3}") int partitions
+    ) {
+      return TopicBuilder.name(name).partitions(partitions).replicas(1).build();
+    }
+  }
+  ```
+  - 어플리케이션 실행 시 `Bean`으로 토픽을 등록(있으면 무시)
+  - 파티션은 `application.yml`과 동일하게 3으로 세팅
+  - 심화과제를 위해 `couponIssuedTopic` 함께 작성
+
+- [OrderCompletedKafkaPublisher.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/kafka/publisher/OrderCompletedKafkaPublisher.java)
+  ```java
+  @Slf4j
+  @Component
+  @RequiredArgsConstructor
+  public class OrderCompletedKafkaPublisher {
+  
+      private final KafkaTemplate<String, OrderCompletedMessage> kafkaTemplate;
+    
+      @Value("${app.kafka.topics.order-completed}")
+      private String topic;
+    
+      @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+      public void on(OrderCompletedEvent event) {
+          OrderCompletedMessage message = new OrderCompletedMessage(
+                  String.valueOf(event.orderId()),
+                  String.valueOf(event.userId()), 
+                  event.lines().stream()
+                          .map(l -> new OrderCompletedMessage.Line(l.productId(), l.quantity()))
+                          .toList(),
+                  Instant.now()
+          );
+  
+          String key = String.valueOf(event.orderId());
+  
+          kafkaTemplate.send(topic, key, message).whenComplete((result, ex) -> {
+              if (ex != null) {
+                  // 실패 로깅 + 재시도 로직 or 알람
+                  log.error("[KAFKA] publish failed: orderId={}, reason={}", event.orderId(), ex.getMessage(), ex);
+              } else {
+                  var md = result.getRecordMetadata();
+                  log.info("[KAFKA] published: orderId={}, partition={}, offset={}", event.orderId(), md.partition(), md.offset());
+              }
+          });
+      }
+  }
+  ```
+  - `@TransactionalEventListener(AFTER_COMMIT)`으로 트랜젝션 커밋 후 보장
+  - `orderId`로 파티셔닝 수행
+
+### 테스트 환경 추가
+
+```java
+@TestConfiguration
+@Profile("test")
+public class IntegrationTestContainersConfig {
+    /* ... */
+
+    public static final KafkaContainer KAFKA =
+          new KafkaContainer(DockerImageName.parse("apache/kafka:4.0.0"));
+
+    static {
+        /* ... */
+        KAFKA.start();
+        
+        /* ... */
+        System.setProperty("spring.kafka.bootstrap-servers", KAFKA.getBootstrapServers());
+    }
+    
+    /* ... */
+    @PreDestroy
+    public void shutdown() {
+        /* ... */
+        if (KAFKA.isRunning()) KAFKA.stop();
+    }
+}
+```
+- `kafka 4.0`부터 `zookeeper`없이 KRaft 모드가 역할을 대체함
+- 
+
+### 테스트 결과
+
+- [TopProductServiceRedisTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/analytics/application/TopProductServiceRedisTest.java)
+  - 기존 Redis 검증용 테스트 파일에 테스트 항목(`kafkaMessageProduced`)을 하나 더 추가했습니다.
+
+- 검증용 테스트 Consumer 추가
+  ```java
+  // test consumer 세팅
+  private KafkaConsumer<String, kr.hhplus.be.server.kafka.message.OrderCompletedMessage> newTestConsumer() {
+      Properties props = new Properties();
+      props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, System.getProperty("spring.kafka.bootstrap-servers"));
+      props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-" + UUID.randomUUID());
+      props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+      props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringDeserializer");
+      props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, "org.springframework.kafka.support.serializer.JsonDeserializer");
+      props.put(JsonDeserializer.TRUSTED_PACKAGES, "kr.hhplus.*");
+      props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
+      props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "kr.hhplus.be.server.kafka.message.OrderCompletedMessage");
+  
+      return new KafkaConsumer<>(props);
+  }
+  ```
+- 테스트 항목 추가
+  ```java
+  @Test
+  @DisplayName("OrderCompletedEvent 발생 시 Kafka 메시지가 발행된다")
+  void kafkaMessageProduced(@Value("${app.kafka.topics.order-completed}") String topic) {
+      // test 컨슈머
+      try (KafkaConsumer<String, OrderCompletedMessage> consumer = newTestConsumer()) {
+          consumer.subscribe(Collections.singletonList(topic)); // OrderCompleted Topic 구독
+          consumer.poll(Duration.ofMillis(0));
+  
+          // 10건 주문 생성하여, 10건이 발생되는 지, 파티션별 순서가 보장되는 지 확인
+          int expected = 10;
+          IntStream.rangeClosed(1, expected)
+                  .forEach(i -> orderFacade.placeOrder(
+                          user.getId(),
+                          List.of(new OrderItemCommand(p1.getId(), 1)),
+                          null
+                  ));
+  
+          // 최대 10초 동안
+          long deadline = System.currentTimeMillis() + 10_000;
+          List<ConsumerRecord<String, OrderCompletedMessage>> collected = new ArrayList<>();
+  
+          while (System.currentTimeMillis() < deadline && collected.size() < expected) {
+              ConsumerRecords<String, OrderCompletedMessage> polled = consumer.poll(Duration.ofMillis(500));
+              polled.forEach(collected::add);
+          }
+  
+          printKafkaRecords(collected);
+  
+          // 10건 수집 건수 확인, 건 별 정합성 확인
+          assertThat(collected.size()).isGreaterThanOrEqualTo(expected);
+          for (ConsumerRecord<String, OrderCompletedMessage> rec : collected) {
+              OrderCompletedMessage msg = rec.value();
+              assertThat(msg).isNotNull();
+              assertThat(msg.userId()).isEqualTo(user.getId().toString());
+              assertThat(msg.lines()).isNotEmpty();
+          }
+  
+          // 파티션 별 순번 보장(증가하는 지) 확인
+          Map<TopicPartition, Long> lastOffsetByPartition = new HashMap<>();
+          for (ConsumerRecord<String, OrderCompletedMessage> rec : collected) {
+              TopicPartition tp = new TopicPartition(rec.topic(), rec.partition());
+              Long prev = lastOffsetByPartition.get(tp);
+              if (prev != null) {
+                  assertThat(rec.offset()).isGreaterThan(prev); // 증가
+              }
+              lastOffsetByPartition.put(tp, rec.offset());
+          }
+      }
+  }
+  ```
+  - 10건의 주문을 발행하여, 10건의 메세지가 적재되는 지 확인
+  - 파티션별로 orderId의 순차(증가)가 보장이 되는 지 확인
+
+### 테스트 결과
+
+![kafka test](./assets/003-kafka-test.png)
+- 수집결과 10건의 메세지가 정상적으로 방행됨
+- 파티션별로 `orderId`값의 증가함을 확인함
+
+
 
 
