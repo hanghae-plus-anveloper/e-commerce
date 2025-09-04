@@ -10,6 +10,8 @@
 >   - `RedisService`는 부적절, `RedisRepository`인프라 레이어로 `service`에서 사용
 
 - `Client` → `Redis` 발급 시도 및 즉시 응답
+  <details><summary>(구)시퀀스 다이어그램</summary>
+
   ```mermaid
   sequenceDiagram
     Client->>CouponService: tryIssue(userId, policyId)
@@ -18,22 +20,28 @@
     CouponRedisRepository-->>CouponService: true/false
     CouponService-->>Client: OK/Fail
   ```
+  </details> 
   - DECR로 남은 수량을 원자적으로 차감(선착순 게이트).
   - 성공 시 PENDING ZSET에 (userId, 시간+랜덤)으로 대기열 등록.
   - 호출자는 즉시 성공/실패를 응답받음(실제 DB 확정은 별도 단계).
 
 - `Worker`에 의한 DB ↔ `Redis` 정책 동기화
+  <details><summary>(구)시퀀스 다이어그램</summary>
+
   ```mermaid
   sequenceDiagram
     CouponWorker->>CouponService: syncActivePolicies()
     CouponService->>CouponPolicyRepository: findActive()
     CouponService->>CouponRedisRepository: setRemaining/removePolicy
   ```
+  </details> 
   - DB의 유효 정책과 Redis의 잔여수량 키를 맞춤.
   - `Redis`에만 남은 오래된 정책 키는 정리.
   - 활성 정책의 `remainingCount`를 `Redis`에 동기화.
 
 - `Worker`에 의한 대기열 처리
+  <details><summary>(구)시퀀스 다이어그램</summary>
+
   ```mermaid
   sequenceDiagram
     CouponWorker->>CouponService: processAllPending()
@@ -45,6 +53,7 @@
     end
     CouponService->>CouponRedisRepository: removePending(succeeded)
   ```
+  </details> 
   - 1초마다 PENDING ZSET을 배치(최대 500) 로 가져와 DB에 발급 확정.
   - 성공한 사용자만 ZREM으로 PENDING에서 제거.
   - PENDING이 비면 키를 삭제(수동 만료 전략).
