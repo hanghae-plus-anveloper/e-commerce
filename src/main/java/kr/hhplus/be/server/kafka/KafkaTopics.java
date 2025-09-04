@@ -19,10 +19,11 @@ public class KafkaTopics {
 
 
     @Bean
-    NewTopic couponIssuedTopic(
-            @Value("${app.kafka.topics.coupon-issued}") String name,
-            @Value("${app.kafka.partitions.coupon-issued:3}") int partitions
+    NewTopic couponPendedTopic(
+            @Value("${app.kafka.topics.coupon-pended}") String name,
+            @Value("${app.kafka.partitions.coupon-pended:3}") int partitions
     ) {
         return TopicBuilder.name(name).partitions(partitions).replicas(1).build();
     }
+
 }
