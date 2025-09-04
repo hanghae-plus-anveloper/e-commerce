@@ -1,6 +1,7 @@
 package kr.hhplus.be.server.kafka.consumer;
 
 import kr.hhplus.be.server.coupon.application.CouponService;
+import kr.hhplus.be.server.coupon.domain.Coupon;
 import kr.hhplus.be.server.kafka.message.CouponPendedMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,11 +22,11 @@ public class CouponIssueKafkaConsumer {
     )
     public void onMessage(CouponPendedMessage msg) {
         try {
-            var coupon = couponService.issueCoupon(msg.userId(), msg.policyId());
-            log.info("[KAFKA][coupon-issued] issued couponId={} userId={} policyId={}",
+            Coupon coupon = couponService.issueCoupon(msg.userId(), msg.policyId());
+            log.info("[KAFKA][coupon-pended] issue couponId={} userId={} policyId={}",
                     coupon.getId(), msg.userId(), msg.policyId());
         } catch (Exception e) {
-            log.warn("[KAFKA][coupon-issued] issue failed userId={} policyId={} - {}",
+            log.warn("[KAFKA][coupon-pended] issue failed userId={} policyId={} - {}",
                     msg.userId(), msg.policyId(), e.getMessage(), e);
         }
     }

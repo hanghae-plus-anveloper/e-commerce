@@ -31,7 +31,7 @@ public class CouponIssueKafkaPublisher {
                 log.error("[KAFKA] publish failed: policyId={}, userId={}, reason={}", event.policyId(), event.userId(), ex.getMessage(), ex);
             } else {
                 var md = res.getRecordMetadata();
-                log.info("[KAFKA] published coupon issue request: topic={}, partition={}, offset={}", md.topic(), md.partition(), md.offset());
+                log.info("[KAFKA] published coupon pended: topic={}, partition={}, offset={}", md.topic(), md.partition(), md.offset());
             }
         });
     }
