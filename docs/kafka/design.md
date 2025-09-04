@@ -31,7 +31,14 @@
 
 ### Kafka 장단점
 
+- 장점
+  - 병렬처리로 높은 처리량을 발휘, 확장성이 뛰어남
+  - 디스크에 기록되어 소실 위험이 없음, 내구성 높음, 재처리 쉬움
+  - 생산하는 쪽과 소비하는쪽의 분리, 장애 격리
 
+- 단점/주의
+  - 전역 순서 미보장, 파티션 단위만 순서 보장됨
+  - 리밸런싱이 발생한 동안 소비기 일시 중단됨
 
 ### 환경 세팅
 
@@ -157,6 +164,7 @@ docker compose -f docker-compose-kafka.yml exec kafka \
   ```
   - 어플리케이션 실행 시 `Bean`으로 토픽을 등록(있으면 무시)
   - 파티션은 `application.yml`과 동일하게 3으로 세팅
+    - 로컬 테스트용으로 replicas 1 지정, 실제로는 3 이상 필요,
   - 심화과제를 위해 `couponIssuedTopic` 함께 작성
 
 - [OrderCompletedKafkaPublisher.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/kafka/publisher/OrderCompletedKafkaPublisher.java)
@@ -197,7 +205,7 @@ docker compose -f docker-compose-kafka.yml exec kafka \
   }
   ```
   - `@TransactionalEventListener(AFTER_COMMIT)`으로 트랜젝션 커밋 후 보장
-  - `orderId`로 파티셔닝 수행
+  - `orderId`로 파티셔닝 수행, 동일 파티션 내에서는 순차가 보장됨
 
 ### 테스트 환경 추가
 
@@ -226,10 +234,13 @@ public class IntegrationTestContainersConfig {
     }
 }
 ```
-- `kafka 4.0`부터 `zookeeper`없이 KRaft 모드가 역할을 대체함
-- 
+- `kafka 4.0`부터 `zookeeper`없이 `KRaft`(내장 컨트롤러) 모드가 역할을 대체함
+  - 클러스터 메타데이터 저장·합의(컨트롤러 선출)
+  - 브로커 멤버십 관리
+  - 토픽/파티션 메타데이터
+  - 리더 선출
 
-### 테스트 결과
+### 메세지 발행 테스트
 
 - [TopProductServiceRedisTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/analytics/application/TopProductServiceRedisTest.java)
   - 기존 Redis 검증용 테스트 파일에 테스트 항목(`kafkaMessageProduced`)을 하나 더 추가했습니다.
@@ -310,7 +321,7 @@ public class IntegrationTestContainersConfig {
 
 ![kafka test](./assets/003-kafka-test.png)
 - 수집결과 10건의 메세지가 정상적으로 방행됨
-- 파티션별로 `orderId`값의 증가함을 확인함
+- 파티션별로 `orderId`값의 증가함을 확인함(전역 순차 X)
 
 
 
