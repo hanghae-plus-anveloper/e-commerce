@@ -103,7 +103,7 @@
     return accepted;
   } 
   ```
-  - Redis에 쿠폰 발급 요청 적재 시 이벤트 발행
+  - Redis에 쿠폰 발급 요청 적재 시 **적재됨** 이벤트 발행
 
 - [CouponWorker.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponWorker.java)
   ```java
@@ -200,7 +200,9 @@
     }
   }
   ```
-  - coupon-pended용 컨슈머 팩토리/리스너 컨테이너를 만들고 JsonDeserializer를 코드로 고정해 메시지를 안전하게 역직렬화하도록 설정한다.
+  - coupon-pended용 컨슈머 팩토리/리스너 컨테이너를 만들고 JsonDeserializer를 코드로 고정해 메시지를 안전하게 역직렬화하도록 설정
+    - Producer의 타입헤더가 불일치하더라도 무시가능, 보안 리스크 경감
+    - 메세지 스키마 고정으로 일관성 유지, 다른 컨슈머와 섞이지 않음
 
 - [CouponIssueKafkaConsumer.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/kafka/consumer/CouponIssueKafkaConsumer.java) 
   ```java
