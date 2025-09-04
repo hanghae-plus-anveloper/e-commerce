@@ -12,10 +12,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,10 +24,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -55,8 +49,15 @@ public class CouponServiceKafkaTest {
     private List<User> users;
     private List<CouponPolicy> policies;
 
+    private final StringBuilder out = new StringBuilder(16_384);
+    private void resetOut() { out.setLength(0); }
+    private void append(String fmt, Object... args) { out.append(String.format(fmt, args)); }
+    private void header(String title) { out.append("\n=== ").append(title).append(" ===\n"); }
+
     @BeforeEach
     void setUp() {
+        resetOut();
+
         couponRepository.deleteAll();
         userRepository.deleteAll();
         couponPolicyRepository.deleteAll();
@@ -81,8 +82,8 @@ public class CouponServiceKafkaTest {
 
         policies.forEach(p -> couponService.setRemainingCount(p.getId(), 200));
 
-        printHeader("세팅 완료");
-        System.out.printf("유저 수: %d, 정책 수: %d, 정책ID: %s%n",
+        header("세팅 완료");
+        append("유저 수: %d, 정책 수: %d, 정책ID: %s%n",
                 users.size(), policies.size(),
                 policies.stream().map(CouponPolicy::getId).collect(Collectors.toList()));
     }
@@ -100,8 +101,8 @@ public class CouponServiceKafkaTest {
             CountDownLatch done = new CountDownLatch(totalRequests);
             AtomicInteger acceptedCounter = new AtomicInteger();
 
-            printHeader("동시 발급 요청 시작");
-            System.out.printf("총 요청 수: %,d (정책 %d개 × 각 1,000명)%n", totalRequests, policies.size());
+            header("동시 발급 요청 시작");
+            append("총 요청 수: %,d (정책 %d개 × 각 1,000명)%n", totalRequests, policies.size());
 
             for (CouponPolicy policy : policies) {
                 for (User u : users) {
@@ -122,9 +123,9 @@ public class CouponServiceKafkaTest {
             done.await(10, TimeUnit.SECONDS);
             pool.shutdownNow();
 
-            System.out.printf("요청 완료. Redis 선착순 통과(accepted): %,d%n", acceptedCounter.get());
+            append("요청 완료. Redis 선착순 통과(accepted): %,d%n", acceptedCounter.get());
 
-            printHeader("Kafka 모니터링(테스트 컨슈머) 수집");
+            header("Kafka 모니터링(테스트 컨슈머) 수집");
             List<ConsumerRecord<String, CouponPendedMessage>> collected = new ArrayList<>();
             long deadline = System.currentTimeMillis() + 20_000;
             while (System.currentTimeMillis() < deadline) {
@@ -132,13 +133,15 @@ public class CouponServiceKafkaTest {
                 polled.forEach(collected::add);
                 if (collected.size() >= 800) break;
             }
-
-            System.out.printf("모니터 수집 메시지 수: %,d (목표 800)%n", collected.size());
+            append("모니터 수집 메시지 수: %,d (목표 800)%n", collected.size());
             assertThat(collected.size()).isGreaterThanOrEqualTo(800);
 
             Map<Long, List<ConsumerRecord<String, CouponPendedMessage>>> byPolicy =
                     collected.stream().collect(Collectors.groupingBy(r -> r.value().policyId()));
 
+            printKafkaSummary(byPolicy);
+
+            // 파티션 단일 매핑 및 오프셋 증가 검증 + 요약 저장
             for (CouponPolicy p : policies) {
                 List<ConsumerRecord<String, CouponPendedMessage>> list =
                         byPolicy.getOrDefault(p.getId(), Collections.emptyList());
@@ -158,12 +161,13 @@ public class CouponServiceKafkaTest {
                     minOffset = Math.min(minOffset, r.offset());
                     maxOffset = Math.max(maxOffset, r.offset());
                 }
-                System.out.printf("policyId=%d\t파티션=%d\t오프셋 범위:\t[%d .. %d]\t%n",
+                append("policyId=%d 파티션=%d 오프셋 범위: [%d .. %d] (연속 증가 OK)%n",
                         p.getId(), list.get(0).partition(), minOffset, maxOffset);
             }
 
-            printHeader("DB 발급 결과 대기");
+            header("DB 발급 결과 대기");
             awaitTotalIssued(800, 20_000);
+
             Map<Long, Long> dbByPolicy = countByPolicy();
             printDbSummary(dbByPolicy);
 
@@ -174,6 +178,8 @@ public class CouponServiceKafkaTest {
             }
             long total = dbByPolicy.values().stream().mapToLong(Long::longValue).sum();
             assertThat(total).isEqualTo(800L);
+        } finally {
+            System.out.print(out.toString());
         }
     }
 
@@ -192,12 +198,23 @@ public class CouponServiceKafkaTest {
 
     private void awaitTotalIssued(long expected, long timeoutMs) throws InterruptedException {
         long deadline = System.currentTimeMillis() + timeoutMs;
+        long lastPrintedAt = 0;
         while (System.currentTimeMillis() < deadline) {
+            long now = System.currentTimeMillis();
             long count = couponRepository.count();
-            if (count >= expected) return;
+            if (count >= expected) {
+                append("DB 발급 누적: %,d / %,d (충족)%n", count, expected);
+                return;
+            }
+            if (now - lastPrintedAt > 1000) { // 1초마다 진행상황 저장
+                append("DB 발급 진행 중: %,d / %,d%n", count, expected);
+                lastPrintedAt = now;
+            }
             Thread.sleep(200);
         }
-        assertThat(couponRepository.count()).isGreaterThanOrEqualTo(expected);
+        long finalCount = couponRepository.count();
+        append("DB 발급 최종: %,d / %,d%n", finalCount, expected);
+        assertThat(finalCount).isGreaterThanOrEqualTo(expected);
     }
 
     private Map<Long, Long> countByPolicy() {
@@ -205,31 +222,25 @@ public class CouponServiceKafkaTest {
         return all.stream().collect(Collectors.groupingBy(c -> c.getPolicy().getId(), Collectors.counting()));
     }
 
-    private void printHeader(String title) {
-        System.out.println();
-        System.out.println("=== " + title + " ===");
-    }
-
-
     private void printKafkaSummary(Map<Long, List<ConsumerRecord<String, CouponPendedMessage>>> byPolicy) {
-        printHeader("Kafka 수집 요약");
+        header("Kafka 수집 요약");
         for (Map.Entry<Long, List<ConsumerRecord<String, CouponPendedMessage>>> e : byPolicy.entrySet()) {
             Long policyId = e.getKey();
             List<ConsumerRecord<String, CouponPendedMessage>> list = e.getValue();
             Map<Integer, Long> byPartition = list.stream()
                     .collect(Collectors.groupingBy(ConsumerRecord::partition, Collectors.counting()));
             long total = list.size();
-            System.out.printf("policyId=%d 총 수집: %,d, 파티션 분포: %s%n", policyId, total, byPartition);
+            append("policyId=%d 총 수집: %,d, 파티션 분포: %s%n", policyId, total, byPartition);
         }
     }
 
     private void printDbSummary(Map<Long, Long> dbByPolicy) {
-        printHeader("DB 발급 요약");
+        header("DB 발급 요약");
         long sum = 0;
         for (Map.Entry<Long, Long> e : dbByPolicy.entrySet()) {
-            System.out.printf("policyId=%d -> 발급 %,d%n", e.getKey(), e.getValue());
+            append("policyId=%d -> 발급 %,d%n", e.getKey(), e.getValue());
             sum += e.getValue();
         }
-        System.out.printf("총 발급: %,d%n", sum);
+        append("총 발급: %,d%n", sum);
     }
 }
