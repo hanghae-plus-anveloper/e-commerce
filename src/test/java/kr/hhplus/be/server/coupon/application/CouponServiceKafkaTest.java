@@ -80,6 +80,11 @@ public class CouponServiceKafkaTest {
         couponPolicyRepository.saveAll(policies);
 
         policies.forEach(p -> couponService.setRemainingCount(p.getId(), 200));
+
+        printHeader("세팅 완료");
+        System.out.printf("유저 수: %d, 정책 수: %d, 정책ID: %s%n",
+                users.size(), policies.size(),
+                policies.stream().map(CouponPolicy::getId).collect(Collectors.toList()));
     }
 
     @Test
@@ -94,6 +99,9 @@ public class CouponServiceKafkaTest {
             CountDownLatch start = new CountDownLatch(1);
             CountDownLatch done = new CountDownLatch(totalRequests);
             AtomicInteger acceptedCounter = new AtomicInteger();
+
+            printHeader("동시 발급 요청 시작");
+            System.out.printf("총 요청 수: %,d (정책 %d개 × 각 1,000명)%n", totalRequests, policies.size());
 
             for (CouponPolicy policy : policies) {
                 for (User u : users) {
@@ -114,6 +122,9 @@ public class CouponServiceKafkaTest {
             done.await(10, TimeUnit.SECONDS);
             pool.shutdownNow();
 
+            System.out.printf("요청 완료. Redis 선착순 통과(accepted): %,d%n", acceptedCounter.get());
+
+            printHeader("Kafka 모니터링(테스트 컨슈머) 수집");
             List<ConsumerRecord<String, CouponPendedMessage>> collected = new ArrayList<>();
             long deadline = System.currentTimeMillis() + 20_000;
             while (System.currentTimeMillis() < deadline) {
@@ -122,6 +133,7 @@ public class CouponServiceKafkaTest {
                 if (collected.size() >= 800) break;
             }
 
+            System.out.printf("모니터 수집 메시지 수: %,d (목표 800)%n", collected.size());
             assertThat(collected.size()).isGreaterThanOrEqualTo(800);
 
             Map<Long, List<ConsumerRecord<String, CouponPendedMessage>>> byPolicy =
@@ -130,22 +142,30 @@ public class CouponServiceKafkaTest {
             for (CouponPolicy p : policies) {
                 List<ConsumerRecord<String, CouponPendedMessage>> list =
                         byPolicy.getOrDefault(p.getId(), Collections.emptyList());
-                if (list.isEmpty()) continue;
+                if (list.isEmpty()) continue; // 모니터가 모두 수집 못했을 수 있어 스킵
 
                 long distinctPartitions = list.stream().map(ConsumerRecord::partition).distinct().count();
                 assertThat(distinctPartitions)
                         .as("policyId=%d must map to single partition".formatted(p.getId()))
                         .isEqualTo(1);
 
+                long minOffset = Long.MAX_VALUE;
+                long maxOffset = Long.MIN_VALUE;
                 long last = -1;
                 for (ConsumerRecord<String, CouponPendedMessage> r : list) {
                     assertThat(r.offset()).isGreaterThan(last);
                     last = r.offset();
+                    minOffset = Math.min(minOffset, r.offset());
+                    maxOffset = Math.max(maxOffset, r.offset());
                 }
+                System.out.printf("policyId=%d\t파티션=%d\t오프셋 범위:\t[%d .. %d]\t%n",
+                        p.getId(), list.get(0).partition(), minOffset, maxOffset);
             }
 
+            printHeader("DB 발급 결과 대기");
             awaitTotalIssued(800, 20_000);
             Map<Long, Long> dbByPolicy = countByPolicy();
+            printDbSummary(dbByPolicy);
 
             for (CouponPolicy p : policies) {
                 assertThat(dbByPolicy.getOrDefault(p.getId(), 0L))
@@ -183,5 +203,33 @@ public class CouponServiceKafkaTest {
     private Map<Long, Long> countByPolicy() {
         List<Coupon> all = couponRepository.findAll();
         return all.stream().collect(Collectors.groupingBy(c -> c.getPolicy().getId(), Collectors.counting()));
+    }
+
+    private void printHeader(String title) {
+        System.out.println();
+        System.out.println("=== " + title + " ===");
+    }
+
+
+    private void printKafkaSummary(Map<Long, List<ConsumerRecord<String, CouponPendedMessage>>> byPolicy) {
+        printHeader("Kafka 수집 요약");
+        for (Map.Entry<Long, List<ConsumerRecord<String, CouponPendedMessage>>> e : byPolicy.entrySet()) {
+            Long policyId = e.getKey();
+            List<ConsumerRecord<String, CouponPendedMessage>> list = e.getValue();
+            Map<Integer, Long> byPartition = list.stream()
+                    .collect(Collectors.groupingBy(ConsumerRecord::partition, Collectors.counting()));
+            long total = list.size();
+            System.out.printf("policyId=%d 총 수집: %,d, 파티션 분포: %s%n", policyId, total, byPartition);
+        }
+    }
+
+    private void printDbSummary(Map<Long, Long> dbByPolicy) {
+        printHeader("DB 발급 요약");
+        long sum = 0;
+        for (Map.Entry<Long, Long> e : dbByPolicy.entrySet()) {
+            System.out.printf("policyId=%d -> 발급 %,d%n", e.getKey(), e.getValue());
+            sum += e.getValue();
+        }
+        System.out.printf("총 발급: %,d%n", sum);
     }
 }
