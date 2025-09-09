@@ -27,4 +27,8 @@ public interface TopProductApi {
     })
     @GetMapping
     ResponseEntity<List<TopProductResponseDto>> getTopProducts();
+
+    @GetMapping("/realtime")
+    ResponseEntity<List<TopProductResponseDto>> getTopProductsRealtime();
+
 }

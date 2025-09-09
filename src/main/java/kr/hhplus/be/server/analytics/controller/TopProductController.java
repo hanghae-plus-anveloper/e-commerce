@@ -22,4 +22,12 @@ public class TopProductController implements TopProductApi {
         return ResponseEntity.ok(result);
     }
 
+    @Override
+    public ResponseEntity<List<TopProductResponseDto>> getTopProductsRealtime() {
+        var result = service.getTop5InLast3DaysFromRedisWithoutCache()
+                .stream()
+                .map(TopProductResponseDto::fromView)
+                .toList();
+        return ResponseEntity.ok(result);
+    }
 }
