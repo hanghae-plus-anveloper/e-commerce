@@ -9,9 +9,12 @@ spring:
     type: com.zaxxer.hikari.HikariDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 3
+      maximum-pool-size: 5
+      minimum-idle: 2
       connection-timeout: 10000
-      max-lifetime: 60000
+      max-lifetime: 1_800_000
+      keepalive-time: 300_000
+      initialization-fail-timeout: 0
 
   jpa:
     open-in-view: false
