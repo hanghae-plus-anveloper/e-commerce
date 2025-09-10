@@ -1,16 +1,17 @@
 package kr.hhplus.be.server.coupon.domain;
 
-import java.util.List;
-import java.util.Optional;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+import java.util.Optional;
+
 public interface CouponRepository extends JpaRepository<Coupon, Long> {
 
-	List<Coupon> findAllByUserId(Long userId);
+	@Query("SELECT c FROM Coupon c WHERE c.userId = :userId")
+	List<Coupon> findAllByUserId(@Param("userId") Long userId);
 
 	Optional<Coupon> findByIdAndUserId(Long id, Long userId);
 
