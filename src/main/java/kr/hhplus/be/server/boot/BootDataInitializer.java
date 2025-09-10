@@ -6,6 +6,8 @@ import kr.hhplus.be.server.coupon.domain.CouponPolicyRepository;
 import kr.hhplus.be.server.coupon.infrastructure.CouponRedisRepository;
 import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.product.domain.ProductRepository;
+import kr.hhplus.be.server.user.domain.User;
+import kr.hhplus.be.server.user.domain.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -25,6 +27,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BootDataInitializer implements ApplicationRunner {
 
+
+    private static final int USER_COUNT = 300;
+
     private static final int PRODUCT_COUNT = 5;
     private static final int PRODUCT_STOCK = 20_000;
     private static final int PRODUCT_PRICE = 2_000;
@@ -39,18 +44,37 @@ public class BootDataInitializer implements ApplicationRunner {
     private final CouponPolicyRepository couponPolicyRepository;
     private final CouponRedisRepository couponRedisRepository;
     private final TopProductService topProductService;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) throws Exception {
         log.info("=== [local] BootDataInitializer: start ===");
 
+        List<User> users = seedUsers();
         List<Product> products = seedProducts();
         CouponPolicy policy = seedCouponPolicy();
         seedTop5Last3Days(products);
 
-        log.info("=== [local] BootDataInitializer: done (policyId={}, products={}) ===",
-                policy.getId(), products.stream().map(Product::getId).toList());
+        log.info(
+                "=== [local] BootDataInitializer: done (users={}, policyId={}, products={}) ===",
+                users.size(), policy.getId(), products.stream().map(Product::getId).toList());
+    }
+
+    private List<User> seedUsers() {
+        long count = userRepository.count();
+        if (count > 0) {
+            List<User> existed = userRepository.findAll();
+            log.info("[INIT] users already exist: {}", existed.size());
+            return existed;
+        }
+        List<User> batch = new ArrayList<>(USER_COUNT);
+        for (int i = 1; i <= USER_COUNT; i++) {
+            batch.add(User.builder().name("u" + i).build());
+        }
+        List<User> saved = userRepository.saveAll(batch);
+        log.info("[INIT] seeded users: {}", saved.size());
+        return saved;
     }
 
     // 기본 상품 세팅
@@ -77,15 +101,7 @@ public class BootDataInitializer implements ApplicationRunner {
         CouponPolicy policy;
         if (couponPolicyRepository.count() == 0) {
             LocalDateTime now = LocalDateTime.now();
-            policy = CouponPolicy.builder()
-                    .discountAmount(COUPON_DISCOUNT_AMOUNT)
-                    .discountRate(COUPON_DISCOUNT_RATE)
-                    .availableCount(COUPON_AVAILABLE)
-                    .remainingCount(COUPON_REMAINING)
-                    .expireDays(COUPON_EXPIRE_DAYS)
-                    .startedAt(now.minusMinutes(1))
-                    .endedAt(now.plusDays(3))
-                    .build();
+            policy = CouponPolicy.builder().discountAmount(COUPON_DISCOUNT_AMOUNT).discountRate(COUPON_DISCOUNT_RATE).availableCount(COUPON_AVAILABLE).remainingCount(COUPON_REMAINING).expireDays(COUPON_EXPIRE_DAYS).startedAt(now.minusMinutes(1)).endedAt(now.plusDays(3)).build();
             policy = couponPolicyRepository.save(policy);
             log.info("[INIT] seeded coupon policy: id={}, remaining={}", policy.getId(), policy.getRemainingCount());
         } else {
@@ -96,8 +112,7 @@ public class BootDataInitializer implements ApplicationRunner {
         try {
             couponRedisRepository.removePolicy(policy.getId());
             couponRedisRepository.setRemainingCount(policy.getId(), policy.getRemainingCount());
-            log.info("[INIT][Redis] COUPON:POLICY:{}:* reset (remaining={})",
-                    policy.getId(), policy.getRemainingCount());
+            log.info("[INIT][Redis] COUPON:POLICY:{}:* reset (remaining={})", policy.getId(), policy.getRemainingCount());
         } catch (Exception e) {
             log.warn("[INIT][Redis] coupon remaining reset failed: {}", e.getMessage(), e);
         }
