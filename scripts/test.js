@@ -76,7 +76,15 @@ const claimCoupon = (userId, policyId) => {
   const res = http.post(url, null, { tags: { name: "2_claim_coupon" } });
 
   trackMetrics(res, couponTime);
-  check(res, { "coupon response valid": (r) => [201, 400, 409].includes(r.status) });
+  // check(res, { "coupon response valid": (r) => [201, 400, 409].includes(r.status) });
+  check(res, {
+    "coupon response valid": (r) => {
+      if (![201, 400, 409].includes(r.status)) {
+        console.error(`Unexpected coupon status: ${r.status}, body=${r.body}`);
+      }
+      return [201, 400, 409].includes(r.status);
+    },
+  });
   return res.status === 201;
 };
 
