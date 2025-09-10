@@ -34,6 +34,7 @@ public class Order {
     private Long couponId;
     private Integer totalAmount;
     private Integer discountAmount;
+    private Integer finalAmount; // 최종 금액 별도로 추가
 
     @Setter
     private OrderStatus status;
@@ -54,7 +55,7 @@ public class Order {
         return create(user.getId(), items, totalAmount, null);
     }
 
-    // UserId 생성 방식
+    // UserId 생성 방식, 기존 코드 유지용 overload
     public static Order create(Long userId, List<OrderItem> items, int totalAmount, Integer discountAmount) {
         if (userId == null) throw new IllegalArgumentException("userId는 필수입니다.");
         if (items == null || items.isEmpty()) throw new IllegalArgumentException("주문 아이템은 하나 이상이어야 합니다.");
@@ -76,6 +77,31 @@ public class Order {
         }
         return order;
     }
+
+    public static Order create(Long userId, List<OrderItem> items, int totalAmount, Long couponId, Integer discountAmount) {
+        if (userId == null) throw new IllegalArgumentException("userId는 필수입니다.");
+        if (items == null || items.isEmpty()) throw new IllegalArgumentException("주문 아이템은 하나 이상이어야 합니다.");
+        if (totalAmount < 0) throw new IllegalArgumentException("총 금액은 0 이상이어야 합니다.");
+
+        Order order = new Order();
+        order.userId = userId;
+        order.couponId = couponId;
+        order.status = OrderStatus.PENDING;
+        order.orderedAt = LocalDateTime.now();
+        order.orderedDate = LocalDate.now();
+        order.totalAmount = totalAmount;
+        order.discountAmount = discountAmount == null ? 0 : discountAmount;
+        order.finalAmount = order.totalAmount - order.discountAmount;
+
+        for (OrderItem item : items) {
+            item.setOrder(order);
+            item.setOrderedAt(order.orderedAt);
+            item.setOrderedDate(order.orderedDate);
+            order.items.add(item);
+        }
+        return order;
+    }
+
 
     public static Order draft(Long userId, Long couponId) {
         if (userId == null) {

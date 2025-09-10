@@ -1,13 +1,5 @@
 package kr.hhplus.be.server.order.facade;
 
-import java.util.Comparator;
-import java.util.List;
-
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
-// import kr.hhplus.be.server.analytics.application.TopProductService;
 import kr.hhplus.be.server.balance.application.BalanceService;
 import kr.hhplus.be.server.common.event.order.OrderCompletedEvent;
 import kr.hhplus.be.server.common.event.order.OrderLineSummary;
@@ -23,6 +15,12 @@ import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.user.application.UserService;
 import kr.hhplus.be.server.user.domain.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Comparator;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -54,17 +52,18 @@ public class OrderFacade {
                 .mapToInt(OrderItem::getSubtotal)
                 .sum();
 
+        int discount = 0;
         if (couponId != null) {
             Coupon coupon = couponService.useCoupon(couponId, user.getId());
-            int discount = coupon.getDiscountRate() > 0
+            discount = coupon.getDiscountRate() > 0
                     ? (int) (total * coupon.getDiscountRate())
                     : coupon.getDiscountAmount();
-            total = Math.max(0, total - discount);
+            // total = Math.max(0, total - discount);
         }
 
         balanceService.useBalance(user, total);
 
-        Order order = orderService.createOrder(user, items, total);
+        Order order = orderService.createOrder(user, items, total, couponId, discount);
 
         List<OrderLineSummary> lines = items.stream()
                 .map(i -> new OrderLineSummary(i.getProduct().getId(), i.getQuantity()))

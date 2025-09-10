@@ -22,4 +22,9 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    @Transactional
+    public Order createOrder(User user, List<OrderItem> items, int totalAmount, Long couponId, Integer discountAmount) {
+        Order order = Order.create(user.getId(), items, totalAmount, couponId, discountAmount);
+        return orderRepository.save(order);
+    }
 }
