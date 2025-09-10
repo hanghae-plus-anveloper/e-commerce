@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Profile("local")
@@ -21,10 +22,12 @@ public class InitController {
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> reset() throws Exception {
-        CouponPolicy policy = bootDataInitializer.runAndReturnPolicy();
+        List<CouponPolicy> policies = bootDataInitializer.runAndReturnPolicy();
         Map<String, Object> result = new HashMap<>();
         result.put("message", "System initialized to default state.");
-        result.put("policyId", policy.getId());
+        result.put("policyIds", policies.stream()
+                .map(CouponPolicy::getId)
+                .toList());
         return ResponseEntity.ok(result);
     }
 

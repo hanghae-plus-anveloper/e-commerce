@@ -4,24 +4,58 @@ import { Counter, Rate, Trend } from "k6/metrics";
 
 export const options = {
   scenarios: {
-    ecommerce_flow: {
-      executor: "per-vu-iterations",
-      vus: 300,
-      iterations: 1,
-      maxDuration: "1m",
-    },
-    ecommerce_flow: {
+    // e_commerce_flow: {
+    //   executor: "per-vu-iterations",
+    //   vus: 300,
+    //   iterations: 1,
+    //   maxDuration: "1m",
+    // },
+    e_commerce_flow_ramping: {
       executor: "ramping-vus",
       startVUs: 0,
       stages: [
-        { duration: "30s", target: 50 },
-        { duration: "30s", target: 150 },
-        { duration: "30s", target: 300 },
+        { duration: "1m", target: 100 },
+        { duration: "1m", target: 200 },
         { duration: "1m", target: 300 },
+        { duration: "2m", target: 300 },
         { duration: "30s", target: 0 },
       ],
       gracefulStop: "30s",
+      startTime: "10s",
+      // startTime: "1m",
     },
+    // flow_10vus: {
+    //   executor: "ramping-vus",
+    //   startVUs: 0,
+    //   stages: [
+    //     { duration: "30s", target: 10 },
+    //     { duration: "1m", target: 10 },
+    //     { duration: "10s", target: 0 },
+    //   ],
+    //   gracefulStop: "10s",
+    // },
+    // flow_100vus: {
+    //   executor: "ramping-vus",
+    //   startVUs: 0,
+    //   stages: [
+    //     { duration: "30s", target: 100 },
+    //     { duration: "1m", target: 100 },
+    //     { duration: "10s", target: 0 },
+    //   ],
+    //   gracefulStop: "10s",
+    //   startTime: "2m",
+    // },
+    // flow_300vus: {
+    //   executor: "ramping-vus",
+    //   startVUs: 0,
+    //   stages: [
+    //     { duration: "30s", target: 300 },
+    //     { duration: "2m", target: 300 },
+    //     { duration: "20s", target: 0 },
+    //   ],
+    //   gracefulStop: "20s",
+    //   startTime: "4m",
+    // },
   },
 };
 
@@ -45,7 +79,7 @@ export const setup = () => {
   check(res, { "init 200": (r) => r.status === 200 });
   const body = res.json();
   console.log("System initialized:", JSON.stringify(body));
-  return { policyId: body.policyId };
+  return { policyIds: body.policyIds };
 };
 
 // 0. 사용자 이름으로 사용자 ID 확인
@@ -130,23 +164,24 @@ const createOrder = (userId, products, coupon) => {
 
 // 메인 시나리오
 const test = (data) => {
-  const { policyId } = data;
+  const { policyIds } = data;
   const vuName = `u${__VU % 300 || 300}`;
   const userId = getUserIdByName(vuName);
 
   const balance = chargeBalance(userId);
-  console.log(`User\t${userId}\tbalance:\t${balance.balance}\t`);
+  // console.log(`User\t${userId}\tbalance:\t${balance.balance}\t`);
 
+  const policyId = policyIds[__VU % policyIds.length];
   const issued = claimCoupon(userId, policyId);
   const coupons = issued ? getUserCoupons(userId) : [];
   if (coupons.length > 0) {
-    console.log(`User\t${userId}\tcoupon:\t${coupons[0].couponId}\t`);
+    // console.log(`User\t${userId}\tcoupon:\t${coupons[0].couponId}\t`);
   }
 
   const top5 = getTopProducts().slice(0, 5);
   if (top5.length > 0) {
     const order = createOrder(userId, top5, coupons?.[0]);
-    console.log(`User\t${userId}\torder:\t${order.orderId}\tcoupon:\t${coupons?.[0]?.couponId || ""}`);
+    console.log(`User\t${userId}\torder:\t${order.orderId}\tcoupon:\t${coupons?.[0]?.couponId || ""}\t`);
   }
 };
 
