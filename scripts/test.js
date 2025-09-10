@@ -165,7 +165,7 @@ const createOrder = (userId, products, coupon) => {
 // 메인 시나리오
 const test = (data) => {
   const { policyIds } = data;
-  const vuName = `u${__VU % 300 || 300}`;
+  const vuName = `u${__VU}`;
   const userId = getUserIdByName(vuName);
 
   const balance = chargeBalance(userId);
