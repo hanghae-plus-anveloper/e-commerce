@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  influxdb-grafana:
+    image: philhawthorne/docker-influxdb-grafana:latest
+    container_name: influxdb-grafana
+    platform: linux/amd64           # M1/M2(Mac ARM) 환경 대응
+    ports:
+      - "3000:3000"   # Grafana UI
+      - "8086:8086"   # InfluxDB API
+    environment:
+      INFLUXDB_DB: k6
+      INFLUXDB_ADMIN_USER: admin
+      INFLUXDB_ADMIN_PASSWORD: admin123
+      INFLUXDB_USER: k6
+      INFLUXDB_USER_PASSWORD: k6pass
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+      - grafana-data:/var/lib/grafana
+
+  k6:
+    image: grafana/k6:latest
+    container_name: k6
+    platform: linux/arm64
+    depends_on:
+      - influxdb-grafana
+    volumes:
+      - ./scripts:/scripts
+    working_dir: /scripts
+
+volumes:
+  influxdb-data:
+  grafana-data:
