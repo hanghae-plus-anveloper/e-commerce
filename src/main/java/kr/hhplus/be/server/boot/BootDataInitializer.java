@@ -3,7 +3,10 @@ package kr.hhplus.be.server.boot;
 import kr.hhplus.be.server.analytics.application.TopProductService;
 import kr.hhplus.be.server.coupon.domain.CouponPolicy;
 import kr.hhplus.be.server.coupon.domain.CouponPolicyRepository;
+import kr.hhplus.be.server.coupon.domain.CouponRepository;
 import kr.hhplus.be.server.coupon.infrastructure.CouponRedisRepository;
+import kr.hhplus.be.server.order.domain.OrderItemRepository;
+import kr.hhplus.be.server.order.domain.OrderRepository;
 import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.product.domain.ProductRepository;
 import kr.hhplus.be.server.user.domain.User;
@@ -40,16 +43,20 @@ public class BootDataInitializer implements ApplicationRunner {
     private static final double COUPON_DISCOUNT_RATE = 0.0;
     private static final int COUPON_EXPIRE_DAYS = 7;
 
-    private final ProductRepository productRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final OrderRepository orderRepository;
+    private final CouponRepository couponRepository;
     private final CouponPolicyRepository couponPolicyRepository;
+    private final ProductRepository productRepository;
+    private final UserRepository userRepository;
+
     private final CouponRedisRepository couponRedisRepository;
     private final TopProductService topProductService;
-    private final UserRepository userRepository;
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) throws Exception {
-        log.info("=== [local] BootDataInitializer: start ===");
+        log.info("=== [local] Boot Data Initializer: start ===");
 
         clearData();
 
@@ -59,15 +66,38 @@ public class BootDataInitializer implements ApplicationRunner {
         seedTop5Last3Days(products);
 
         log.info(
-                "=== [local] BootDataInitializer: done (users={}, policyId={}, products={}) ===",
+                "=== [local] Boot Data Initializer: done (users={}, policyId={}, products={}) ===",
                 users.size(), policy.getId(), products.stream().map(Product::getId).toList());
     }
+
+    @Transactional
+    public CouponPolicy runAndReturnPolicy() throws Exception {
+        log.info("=== [local] Manual Boot Data Initializer: start ===");
+
+        clearData();
+
+        List<User> users = seedUsers();
+        List<Product> products = seedProducts();
+        CouponPolicy policy = seedCouponPolicy();
+        seedTop5Last3Days(products);
+
+        log.info(
+                "=== [local] Manual Boot Data Initializer: done (users={}, policyId={}, products={}) ===",
+                users.size(), policy.getId(), products.stream().map(Product::getId).toList());
+        return policy;
+    }
+
 
     private void clearData() {
         log.info("[INIT] clearing all existing data...");
 
-        productRepository.deleteAllInBatch();
+        orderItemRepository.deleteAllInBatch();
+        orderRepository.deleteAllInBatch();
+
+        couponRepository.deleteAllInBatch();
         couponPolicyRepository.deleteAllInBatch();
+
+        productRepository.deleteAllInBatch();
         userRepository.deleteAllInBatch();
 
         try {
@@ -81,12 +111,6 @@ public class BootDataInitializer implements ApplicationRunner {
     }
 
     private List<User> seedUsers() {
-        long count = userRepository.count();
-        if (count > 0) {
-            List<User> existed = userRepository.findAll();
-            log.info("[INIT] users already exist: {}", existed.size());
-            return existed;
-        }
         List<User> batch = new ArrayList<>(USER_COUNT);
         for (int i = 1; i <= USER_COUNT; i++) {
             batch.add(User.builder().name("u" + i).build());
@@ -98,16 +122,13 @@ public class BootDataInitializer implements ApplicationRunner {
 
     // 기본 상품 세팅
     private List<Product> seedProducts() {
-        long count = productRepository.count();
-        if (count > 0) {
-            List<Product> existed = productRepository.findAll();
-            log.info("[INIT] products already exist: {}", existed.stream().map(Product::getId).toList());
-            return existed;
-        }
-
         List<Product> batch = new ArrayList<>(PRODUCT_COUNT);
         for (int i = 1; i <= PRODUCT_COUNT; i++) {
-            Product p = Product.builder().name("p" + i).price(PRODUCT_PRICE).stock(PRODUCT_STOCK).build();
+            Product p = Product.builder()
+                    .name("p" + i)
+                    .price(PRODUCT_PRICE)
+                    .stock(PRODUCT_STOCK)
+                    .build();
             batch.add(p);
         }
         List<Product> saved = productRepository.saveAll(batch);
@@ -117,25 +138,30 @@ public class BootDataInitializer implements ApplicationRunner {
 
     // 쿠폰 정책 세팅
     private CouponPolicy seedCouponPolicy() {
-        CouponPolicy policy;
-        if (couponPolicyRepository.count() == 0) {
-            LocalDateTime now = LocalDateTime.now();
-            policy = CouponPolicy.builder().discountAmount(COUPON_DISCOUNT_AMOUNT).discountRate(COUPON_DISCOUNT_RATE).availableCount(COUPON_AVAILABLE).remainingCount(COUPON_REMAINING).expireDays(COUPON_EXPIRE_DAYS).startedAt(now.minusMinutes(1)).endedAt(now.plusDays(3)).build();
-            policy = couponPolicyRepository.save(policy);
-            log.info("[INIT] seeded coupon policy: id={}, remaining={}", policy.getId(), policy.getRemainingCount());
-        } else {
-            policy = couponPolicyRepository.findAll().get(0);
-            log.info("[INIT] coupon policy exists: id={}, remaining={}", policy.getId(), policy.getRemainingCount());
-        }
+        LocalDateTime now = LocalDateTime.now();
+        CouponPolicy policy = CouponPolicy.builder()
+                .discountAmount(COUPON_DISCOUNT_AMOUNT)
+                .discountRate(COUPON_DISCOUNT_RATE)
+                .availableCount(COUPON_AVAILABLE)
+                .remainingCount(COUPON_REMAINING)
+                .expireDays(COUPON_EXPIRE_DAYS)
+                .startedAt(now.minusMinutes(1))
+                .endedAt(now.plusDays(3))
+                .build();
+        policy = couponPolicyRepository.save(policy);
 
         try {
             couponRedisRepository.removePolicy(policy.getId());
             couponRedisRepository.setRemainingCount(policy.getId(), policy.getRemainingCount());
-            log.info("[INIT][Redis] COUPON:POLICY:{}:* reset (remaining={})", policy.getId(), policy.getRemainingCount());
+            log.info("[INIT][Redis] COUPON:POLICY:{}:* reset (remaining={})",
+                    policy.getId(), policy.getRemainingCount());
         } catch (Exception e) {
             log.warn("[INIT][Redis] coupon remaining reset failed: {}", e.getMessage(), e);
         }
+
+        log.info("[INIT] seeded coupon policy: id={}, remaining={}", policy.getId(), policy.getRemainingCount());
         return policy;
+
     }
 
     // TOP 5 Redis 세팅

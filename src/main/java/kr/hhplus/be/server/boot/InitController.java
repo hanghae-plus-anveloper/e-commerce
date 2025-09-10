@@ -1,11 +1,15 @@
 package kr.hhplus.be.server.boot;
 
+import kr.hhplus.be.server.coupon.domain.CouponPolicy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Profile("local")
 @RestController
@@ -16,8 +20,12 @@ public class InitController {
     private final BootDataInitializer bootDataInitializer;
 
     @PostMapping
-    public ResponseEntity<String> reset() throws Exception {
-        bootDataInitializer.run(null); // ApplicationRunner 그대로 재사용
-        return ResponseEntity.ok("System initialized to default state.");
+    public ResponseEntity<Map<String, Object>> reset() throws Exception {
+        CouponPolicy policy = bootDataInitializer.runAndReturnPolicy();
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "System initialized to default state.");
+        result.put("policyId", policy.getId());
+        return ResponseEntity.ok(result);
     }
+
 }
