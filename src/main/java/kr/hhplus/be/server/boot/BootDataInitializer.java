@@ -31,11 +31,11 @@ public class BootDataInitializer implements ApplicationRunner {
     private static final int USER_COUNT = 300;
 
     private static final int PRODUCT_COUNT = 5;
-    private static final int PRODUCT_STOCK = 20_000;
+    private static final int PRODUCT_STOCK = 2_000;
     private static final int PRODUCT_PRICE = 2_000;
 
-    private static final int COUPON_AVAILABLE = 1_000;
-    private static final int COUPON_REMAINING = 1_000;
+    private static final int COUPON_AVAILABLE = 100;
+    private static final int COUPON_REMAINING = 100;
     private static final int COUPON_DISCOUNT_AMOUNT = 2_000;
     private static final double COUPON_DISCOUNT_RATE = 0.0;
     private static final int COUPON_EXPIRE_DAYS = 7;
@@ -51,6 +51,8 @@ public class BootDataInitializer implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         log.info("=== [local] BootDataInitializer: start ===");
 
+        clearData();
+
         List<User> users = seedUsers();
         List<Product> products = seedProducts();
         CouponPolicy policy = seedCouponPolicy();
@@ -59,6 +61,23 @@ public class BootDataInitializer implements ApplicationRunner {
         log.info(
                 "=== [local] BootDataInitializer: done (users={}, policyId={}, products={}) ===",
                 users.size(), policy.getId(), products.stream().map(Product::getId).toList());
+    }
+
+    private void clearData() {
+        log.info("[INIT] clearing all existing data...");
+
+        productRepository.deleteAllInBatch();
+        couponPolicyRepository.deleteAllInBatch();
+        userRepository.deleteAllInBatch();
+
+        try {
+            couponRedisRepository.removePolicyAll();
+            topProductService.clearAll();
+        } catch (Exception e) {
+            log.warn("[INIT][Redis] clear failed: {}", e.getMessage(), e);
+        }
+
+        log.info("[INIT] all existing data cleared");
     }
 
     private List<User> seedUsers() {
