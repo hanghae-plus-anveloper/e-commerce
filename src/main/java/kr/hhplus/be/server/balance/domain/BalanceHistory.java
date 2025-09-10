@@ -19,9 +19,12 @@ public class BalanceHistory {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "balance_id", nullable = false)
+    @JoinColumn(name = "balance_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_balance_history_balance",
+            foreignKeyDefinition = "FOREIGN KEY (balance_id) REFERENCES balance(id) ON DELETE CASCADE"))
     @JsonBackReference
     private Balance balance;
+
 
     @Column(nullable = false)
     private int amount;
