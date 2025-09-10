@@ -10,6 +10,18 @@ export const options = {
       iterations: 1,
       maxDuration: "1m",
     },
+    ecommerce_flow: {
+      executor: "ramping-vus",
+      startVUs: 0,
+      stages: [
+        { duration: "30s", target: 50 },
+        { duration: "30s", target: 150 },
+        { duration: "30s", target: 300 },
+        { duration: "1m", target: 300 },
+        { duration: "30s", target: 0 },
+      ],
+      gracefulStop: "30s",
+    },
   },
 };
 
@@ -111,7 +123,7 @@ const createOrder = (userId, products, coupon) => {
 // 메인 시나리오
 const test = (data) => {
   const { policyId } = data;
-  const vuName = `u${__VU}`;
+  const vuName = `u${__VU % 300 || 300}`;
   const userId = getUserIdByName(vuName);
 
   const balance = chargeBalance(userId);

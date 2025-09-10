@@ -30,15 +30,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BootDataInitializer implements ApplicationRunner {
 
-
     private static final int USER_COUNT = 300;
 
     private static final int PRODUCT_COUNT = 5;
-    private static final int PRODUCT_STOCK = 2_000;
+    private static final int PRODUCT_STOCK = 2_000_000;
     private static final int PRODUCT_PRICE = 2_000;
 
-    private static final int COUPON_AVAILABLE = 100;
-    private static final int COUPON_REMAINING = 100;
+    private static final int COUPON_AVAILABLE = 100_000;
+    private static final int COUPON_REMAINING = 100_000;
     private static final int COUPON_DISCOUNT_AMOUNT = 2_000;
     private static final double COUPON_DISCOUNT_RATE = 0.0;
     private static final int COUPON_EXPIRE_DAYS = 7;
@@ -65,8 +64,7 @@ public class BootDataInitializer implements ApplicationRunner {
         CouponPolicy policy = seedCouponPolicy();
         seedTop5Last3Days(products);
 
-        log.info(
-                "=== [local] Boot Data Initializer: done (users={}, policyId={}, products={}) ===",
+        log.info("=== [local] Boot Data Initializer: done (users={}, policyId={}, products={}) ===",
                 users.size(), policy.getId(), products.stream().map(Product::getId).toList());
     }
 
@@ -81,12 +79,10 @@ public class BootDataInitializer implements ApplicationRunner {
         CouponPolicy policy = seedCouponPolicy();
         seedTop5Last3Days(products);
 
-        log.info(
-                "=== [local] Manual Boot Data Initializer: done (users={}, policyId={}, products={}) ===",
+        log.info("=== [local] Manual Boot Data Initializer: done (users={}, policyId={}, products={}) ===",
                 users.size(), policy.getId(), products.stream().map(Product::getId).toList());
         return policy;
     }
-
 
     private void clearData() {
         log.info("[INIT] clearing all existing data...");
@@ -124,11 +120,7 @@ public class BootDataInitializer implements ApplicationRunner {
     private List<Product> seedProducts() {
         List<Product> batch = new ArrayList<>(PRODUCT_COUNT);
         for (int i = 1; i <= PRODUCT_COUNT; i++) {
-            Product p = Product.builder()
-                    .name("p" + i)
-                    .price(PRODUCT_PRICE)
-                    .stock(PRODUCT_STOCK)
-                    .build();
+            Product p = Product.builder().name("p" + i).price(PRODUCT_PRICE).stock(PRODUCT_STOCK).build();
             batch.add(p);
         }
         List<Product> saved = productRepository.saveAll(batch);
@@ -139,22 +131,13 @@ public class BootDataInitializer implements ApplicationRunner {
     // 쿠폰 정책 세팅
     private CouponPolicy seedCouponPolicy() {
         LocalDateTime now = LocalDateTime.now();
-        CouponPolicy policy = CouponPolicy.builder()
-                .discountAmount(COUPON_DISCOUNT_AMOUNT)
-                .discountRate(COUPON_DISCOUNT_RATE)
-                .availableCount(COUPON_AVAILABLE)
-                .remainingCount(COUPON_REMAINING)
-                .expireDays(COUPON_EXPIRE_DAYS)
-                .startedAt(now.minusMinutes(1))
-                .endedAt(now.plusDays(3))
-                .build();
+        CouponPolicy policy = CouponPolicy.builder().discountAmount(COUPON_DISCOUNT_AMOUNT).discountRate(COUPON_DISCOUNT_RATE).availableCount(COUPON_AVAILABLE).remainingCount(COUPON_REMAINING).expireDays(COUPON_EXPIRE_DAYS).startedAt(now.minusMinutes(1)).endedAt(now.plusDays(3)).build();
         policy = couponPolicyRepository.save(policy);
 
         try {
             couponRedisRepository.removePolicy(policy.getId());
             couponRedisRepository.setRemainingCount(policy.getId(), policy.getRemainingCount());
-            log.info("[INIT][Redis] COUPON:POLICY:{}:* reset (remaining={})",
-                    policy.getId(), policy.getRemainingCount());
+            log.info("[INIT][Redis] COUPON:POLICY:{}:* reset (remaining={})", policy.getId(), policy.getRemainingCount());
         } catch (Exception e) {
             log.warn("[INIT][Redis] coupon remaining reset failed: {}", e.getMessage(), e);
         }
