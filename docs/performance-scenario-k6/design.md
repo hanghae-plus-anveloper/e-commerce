@@ -73,7 +73,7 @@
 
 ### Grafana & InfluxDB 세팅
 
-- 방법 1: philhawthorne/docker-influxdb-grafana 이미지 사용
+- 방법 1: philhawthorne/docker-influxdb-grafana 이미지 사용 (미사용)
   - https://hub.docker.com/r/philhawthorne/docker-influxdb-grafana/ 
   - Grafana K6 대시보드 템플릿(2587)과 호환되는 Docker 이미지 사용
     ```bash
@@ -88,7 +88,7 @@
     ```
   - 특이사항: 마지막 업데이트가 5년 전
 
-- 방법 2: docker-compose-k6.yml 직접 작성, latest 버전 사용
+- 방법 2: docker-compose-k6.yml 직접 작성, latest 버전 사용 ✅
   -  [docker-compose-k6.yml](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docker-compose-k6.yml)
     
       <details><summary>세부 코드</summary>
@@ -150,7 +150,7 @@
 ### 스크립트 실행
 
 ```bash
-# 시나리오 별 ENV 추가
+# 각 시나리오 별 ENV 에 따른 실행 방식 추가(하단 내용)
 docker-compose -f docker-compose-k6.yml run --rm k6 \
   run --out influxdb=http://k6:k6pass@influxdb:8086/k6 \
   /scripts/test.js
@@ -238,12 +238,21 @@ const orderTime = new Trend("order_time");
 ```
 </details>
 
-- `httpFailures`, `httpSuccess`, `requests`: 기본 지표 중 실패율과 성공율 별도 관리
-- `chargeTime`: 잔액 충전 성능 지표
-- `couponTime`: 쿠폰 발급 시도 성능 지표
-- `couponCheckTime`: 비동기로 발급된 내 쿠폰 목록 조회 성능 지표
-- `top5Time`: 상위 상품 조회 성능 지표
-- `orderTime`: 주문 생성 성능 지표
+- 측정 지표 세팅(미사용)
+  - `httpFailures`, `httpSuccess`, `requests`: 기본 지표 중 실패율과 성공율 별도 관리
+  - `chargeTime`: 잔액 충전 성능 지표
+  - `couponTime`: 쿠폰 발급 시도 성능 지표
+  - `couponCheckTime`: 비동기로 발급된 내 쿠폰 목록 조회 성능 지표
+  - `top5Time`: 상위 상품 조회 성능 지표
+  - `orderTime`: 주문 생성 성능 지표
+
+- `22201` 대시보드 기본 수집 정보에 의해 tags를 API에 지정하는 경우 별도의 Trend 없이도 기본적으로 측정됨
+- `__ENV.SCENARIO` 실행 스크립트에 따라 시나리오 구분 실행
+  - `flow_iterations`: 1회 실행, 300VUs
+  - `flow_10vus`: 소규모 사용자(10명) 상황에서 지표 확인
+  - `flow_100vus`: 중간 부하(100명) 상황에서 지표 확인
+  - `flow_300vus`: 최종 목적 부하(300명) 상황에서 지표 확인
+
 
 ### 측정치 기록 
 
@@ -257,7 +266,8 @@ const trackMetrics = (res, trendMetric) => {
   requests.add(1);
 };
 ```
-- 측정 기록 헬퍼 함수
+- 측정 기록 헬퍼 함수(미사용)
+  - k6 기본 측정 지표, Tags 사용
 
 ### 기본 데이터 초기화
 
