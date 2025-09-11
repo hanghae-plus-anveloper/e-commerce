@@ -150,7 +150,7 @@ const getTopProducts = () => {
   return res.json() || [];
 };
 
-// 5. 주문 생성 (쿠폰 있으면 적용)
+// 5. 주문 생성
 const createOrder = (userId, products, coupon) => {
   const url = `${BASE_URL}/orders`;
   const payload = JSON.stringify({

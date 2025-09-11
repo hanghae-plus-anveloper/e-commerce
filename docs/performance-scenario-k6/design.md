@@ -63,9 +63,9 @@
 - 모두 충분한 금액을 충전하고, 쿠폰 발급 시도
 - 정책 설정에 따라 100건만 쿠폰 발급 성공, 나머지 200건은 실패
 - 쿠폰 발급 실패 여부와 상관없이 300건의 주문 모두 정상 생성
-- 쿠폰 적용된 100건 + 쿠폰 없는 200건 = 총 300건 주문 성공
-  - 병목 체크를 위해 코두 쿠폰을 발급 해주는 상태 조건으로 변경 
-- 잔액이 예측했던 금액과 일치하는지 확인
+- ~~잔액이 예측했던 금액과 일치하는지 확인~~
+- ~~쿠폰 적용된 100건 + 쿠폰 없는 200건 = 총 300건 주문 성공~~
+  - **병목 체크를 위해 모두 쿠폰을 발급 해주는 상태 조건으로 변경** 
 - 300명 동시 실행 시 DB, Redis, 분산락 처리 과정에서 병목이 없는지 확인
 - SLA(95% 응답 200ms 이내) 충족 여부 검증
 
@@ -141,16 +141,16 @@
   - `Grafana` 최신 버전에서 `InfluxQL`이 아닌 `Flux`로 쿼리가 변경되면서 `K6 2578` 템플릿 사용 시 대부분의 패널들이 No Data로 뜨는 상황이 발생하여 템플릿 사용불가
   - 직접 패널을 추가시에는 지정한 Trend나 vus 기본 측정값이 확인 가능
 
-- 결론
+- **결론**
   -  ~~K6 측정 항목들이 수년간 크게 변화가 없기때문에 템플릿 이미지를 사용해도 문제가 없을 것으로 판단됨~~ 
   -  ~~추후 최신 Grafana-InfluxDB-K6 호환 버전의 템플릿으로 Grafana 대시 보드 변경 예정~~
   - `docker-compose-k6.yml`로 최신 버전의 `influxDB` 와 `Grafana` 설치 사용
-  - `K6` 최신 대시보드 인 `22201` 템플릿으로 변경
+  - `K6` 최신 대시보드 인 **`22201`** 템플릿으로 변경
 
 ### 스크립트 실행
 
 ```bash
-# 각 시나리오 별 ENV 에 따른 실행 방식 추가(하단 내용)
+# 각 시나리오 별 ENV 에 따른 실행 방식 추가(하단에 개별 스크립트 추가)
 docker-compose -f docker-compose-k6.yml run --rm k6 \
   run --out influxdb=http://k6:k6pass@influxdb:8086/k6 \
   /scripts/test.js
@@ -225,11 +225,12 @@ export const options = { scenarios };
 
 const BASE_URL = "http://host.docker.internal:8080";
 
+// 미사용
 const httpFailures = new Rate("http_req_failed");
 const httpSuccess = new Rate("http_req_success");
 const requests = new Counter("http_reqs");
 
-// 성능 지표
+// 성능 지표 // 미사용, 기본 tags 기능으로 조회가능
 const chargeTime = new Trend("charge_balance_time");
 const couponTime = new Trend("coupon_issue_time");
 const couponCheckTime = new Trend("coupon_check_time");
@@ -239,14 +240,14 @@ const orderTime = new Trend("order_time");
 </details>
 
 - 측정 지표 세팅(미사용)
-  - `httpFailures`, `httpSuccess`, `requests`: 기본 지표 중 실패율과 성공율 별도 관리
+  - ~~`httpFailures`, `httpSuccess`, `requests`: 기본 지표 중 실패율과 성공율 별도 관리~~
   - `chargeTime`: 잔액 충전 성능 지표
   - `couponTime`: 쿠폰 발급 시도 성능 지표
   - `couponCheckTime`: 비동기로 발급된 내 쿠폰 목록 조회 성능 지표
   - `top5Time`: 상위 상품 조회 성능 지표
   - `orderTime`: 주문 생성 성능 지표
 
-- `22201` 대시보드 기본 수집 정보에 의해 tags를 API에 지정하는 경우 별도의 Trend 없이도 기본적으로 측정됨
+- `22201` 대시보드 기본 수집 정보에 의해 `tags`를 `API`에 지정하는 경우 별도의 `Trend` 없이도 기본적으로 측정됨
 - `__ENV.SCENARIO` 실행 스크립트에 따라 시나리오 구분 실행
   - `flow_iterations`: 1회 실행, 300VUs
   - `flow_10vus`: 소규모 사용자(10명) 상황에서 지표 확인
@@ -254,9 +255,10 @@ const orderTime = new Trend("order_time");
   - `flow_300vus`: 최종 목적 부하(300명) 상황에서 지표 확인
 
 
-### 측정치 기록 
+### 측정치 기록
 
 ```js
+// 미사용
 const trackMetrics = (res, trendMetric) => {
   if (trendMetric) {
     trendMetric.add(res.timings.duration);
@@ -267,7 +269,7 @@ const trackMetrics = (res, trendMetric) => {
 };
 ```
 - 측정 기록 헬퍼 함수(미사용)
-  - k6 기본 측정 지표, Tags 사용
+  - k6 기본 측정 지표, Tags로 대체
 
 ### 기본 데이터 초기화
 
@@ -275,7 +277,10 @@ const trackMetrics = (res, trendMetric) => {
 // DB 초기화
 export const setup = () => {
   const url = `${BASE_URL}/init`;
-  const res = http.post(url, null, { headers: { "Content-Type": "application/json" } });
+  const res = http.post(url, null, {
+    headers: { "Content-Type": "application/json" },
+    tags: { name: "0_setup_init_data" },
+  });
   check(res, { "init 200": (r) => r.status === 200 });
   const body = res.json();
   console.log("System initialized:", JSON.stringify(body));
@@ -390,7 +395,14 @@ const getUserIdByName = (vuName) => {
   const url = `${BASE_URL}/users/id?name=${vuName}`;
   const res = http.get(url, { tags: { name: "0_get_userId" } });
   trackMetrics(res);
-  check(res, { "getUserId 200": (r) => r.status === 200 });
+  check(res, {
+    "getUserId 200": (r) => {
+      if (r.status !== 200) {
+        console.error(`Unexpected user status: ${r.status}, body=${r.body}`);
+      }
+      return r.status === 200;
+    },
+  });
   return res.json();
 };
 ```
@@ -478,7 +490,7 @@ const getTopProducts = () => {
 ### 주문 생성
 
 ```js
-// 5. 주문 생성 (쿠폰 있으면 적용)
+// 5. 주문 생성
 const createOrder = (userId, products, coupon) => {
   const url = `${BASE_URL}/orders`;
   const payload = JSON.stringify({
@@ -493,7 +505,14 @@ const createOrder = (userId, products, coupon) => {
   });
 
   trackMetrics(res, orderTime);
-  check(res, { "order 201": (r) => r.status === 201 });
+  check(res, {
+    "order 201": (r) => {
+      if (r.status !== 201) {
+        console.error(`Unexpected order status: ${r.status}, body=${r.body}`);
+      }
+      return r.status === 201;
+    },
+  });
   return res.json();
 };
 ```
@@ -639,7 +658,7 @@ docker-compose -f docker-compose-k6.yml run --rm \
 
 - 서버 에러 로그 구체화
   - 도메인 레벨 뿐만 아니라, 시스템 상의 에러로그를 단순 500처리 하지 않고, 구체적으로 제공
-  - 에러 로그의 원인인 Multilock이 사용되는 코드 개선
+  - **에러 로그의 원인인 Multi Lock이 사용되는 코드 개선**
   
 - 재시도 로직 추가
   - 서버에서의 실패가 외부로 노출되지 않도록 재시도 로직 추가
@@ -649,7 +668,7 @@ docker-compose -f docker-compose-k6.yml run --rm \
 
 멀티락 에러가 출력되는 createOrder 관련하여 서버 환경 리소스를 확장하고, 멀티락 로직을 개선
 
-### DB 설정 변경
+### DB 설정 변경 - 해결방법 X
 
 - [docker-compose.yml](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docker-compose.yml): MySQL Docker 에 세부 설정 추가
   ```yml
@@ -732,7 +751,7 @@ docker-compose -f docker-compose-k6.yml run --rm \
   ![Flow Ramping 300vus Fail Grafana 2 02](./assets/053-flow-ramping-300vus-grafana2.png)
   - DB 성능 확장보다 근본적인 문제 접근이 필요함
 
-### 에러 원인 직접 수정
+### 에러 원인 직접 수정 - 해결 방법 O
 
 #### 기존 멀티락 로직
 
