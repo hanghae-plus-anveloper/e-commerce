@@ -142,20 +142,23 @@
   - 직접 패널을 추가시에는 지정한 Trend나 vus 기본 측정값이 확인 가능
 
 - 결론
-  -  K6 측정 항목들이 수년간 크게 변화가 없기때문에 템플릿 이미지를 사용해도 문제가 없을 것으로 판단됨 
-  -  추후 최신 Grafana-InfluxDB-K6 호환 버전의 템플릿으로 Grafana 대시 보드 변경 예정
+  -  ~~K6 측정 항목들이 수년간 크게 변화가 없기때문에 템플릿 이미지를 사용해도 문제가 없을 것으로 판단됨~~ 
+  -  ~~추후 최신 Grafana-InfluxDB-K6 호환 버전의 템플릿으로 Grafana 대시 보드 변경 예정~~
+  - `docker-compose-k6.yml`로 최신 버전의 `influxDB` 와 `Grafana` 설치 사용
+  - `K6` 최신 대시보드 인 `22201` 템플릿으로 변경
 
 ### 스크립트 실행
 
 ```bash
+# 시나리오 별 ENV 추가
 docker-compose -f docker-compose-k6.yml run --rm k6 \
   run --out influxdb=http://k6:k6pass@influxdb:8086/k6 \
   /scripts/test.js
 ```
 
-- InfluxDB + Grafana 이미지 기반으로 구성
-- k6 → InfluxDB → Grafana 데이터 파이프라인 확인
-- Grafana 대시보드는 기본 k6 2587 템플릿 사용, InfluxQL 기반 쿼리 정상 동작 여부 검증
+- `InfluxDB` + `Grafana` 이미지 기반으로 구성
+- `k6` → `InfluxDB` → `Grafana` 데이터 파이프라인 확인
+- `Grafana` 대시보드는 기본 k6 ~~2587~~ `22201` 템플릿 사용, ~~InfluxQL 기반 쿼리~~ API 정상 동작 여부 검증
 
 ## 테스트 코드
 
@@ -166,63 +169,59 @@ docker-compose -f docker-compose-k6.yml run --rm k6 \
 <details><summary>세팅 코드</summary>
 
 ```js
+let scenarios = {};
 
-export const options = {
-  scenarios: {
-    // e_commerce_flow: {
-    //   executor: "per-vu-iterations",
-    //   vus: 300,
-    //   iterations: 1,
-    //   maxDuration: "1m",
-    // },
-    e_commerce_flow_ramping: {
+if (__ENV.SCENARIO === "flow_iterations") {
+  scenarios = {
+    flow_iterations: {
+      executor: "per-vu-iterations",
+      vus: 300,
+      iterations: 1,
+      maxDuration: "1m",
+    },
+  };
+} else if (__ENV.SCENARIO === "flow_10vus") {
+  scenarios = {
+    flow_10vus: {
       executor: "ramping-vus",
       startVUs: 0,
       stages: [
-        { duration: "1m", target: 100 },
-        { duration: "1m", target: 200 },
-        { duration: "1m", target: 300 },
-        { duration: "2m", target: 300 },
-        { duration: "30s", target: 0 },
+        { duration: "30s", target: 10 },
+        { duration: "1m", target: 10 },
+        { duration: "10s", target: 0 },
       ],
-      gracefulStop: "30s",
-      startTime: "10s",
-      // startTime: "1m",
+      gracefulStop: "10s",
     },
-    // flow_10vus: {
-    //   executor: "ramping-vus",
-    //   startVUs: 0,
-    //   stages: [
-    //     { duration: "30s", target: 10 },
-    //     { duration: "1m", target: 10 },
-    //     { duration: "10s", target: 0 },
-    //   ],
-    //   gracefulStop: "10s",
-    // },
-    // flow_100vus: {
-    //   executor: "ramping-vus",
-    //   startVUs: 0,
-    //   stages: [
-    //     { duration: "30s", target: 100 },
-    //     { duration: "1m", target: 100 },
-    //     { duration: "10s", target: 0 },
-    //   ],
-    //   gracefulStop: "10s",
-    //   startTime: "2m",
-    // },
-    // flow_300vus: {
-    //   executor: "ramping-vus",
-    //   startVUs: 0,
-    //   stages: [
-    //     { duration: "30s", target: 300 },
-    //     { duration: "2m", target: 300 },
-    //     { duration: "20s", target: 0 },
-    //   ],
-    //   gracefulStop: "20s",
-    //   startTime: "4m",
-    // },
-  },
-};
+  };
+} else if (__ENV.SCENARIO === "flow_100vus") {
+  scenarios = {
+    flow_100vus: {
+      executor: "ramping-vus",
+      startVUs: 0,
+      stages: [
+        { duration: "30s", target: 100 },
+        { duration: "1m", target: 100 },
+        { duration: "10s", target: 0 },
+      ],
+      gracefulStop: "10s",
+    },
+  };
+} else if (__ENV.SCENARIO === "flow_300vus") {
+  scenarios = {
+    flow_300vus: {
+      executor: "ramping-vus",
+      startVUs: 0,
+      stages: [
+        { duration: "30s", target: 300 },
+        { duration: "2m", target: 300 },
+        { duration: "20s", target: 0 },
+      ],
+      gracefulStop: "20s",
+    },
+  };
+}
+
+export const options = { scenarios };
 
 const BASE_URL = "http://host.docker.internal:8080";
 
@@ -526,38 +525,114 @@ export default test;
 - 쿠폰 정책 ID의 경우 별도의 이름이 없어 setup으로 DB 초기화 시에 policyIds를 반환받아 테스트에서 활용
 - 사용자 ID의 경우 1~300은 예측이 가능하여 setup에서 300명의 사용자를 미리 만들지만, vus 증가 시를 대응하기 위해 getUserIdByName 호출 시 없는 계정의 경우 생성하여 ID 반환됨
   
+### 시나리오 별 실행 코드
+
+- iterations 시나리오
+```bash
+docker-compose -f docker-compose-k6.yml run --rm \
+  -e SCENARIO=flow_iterations \
+  k6 run --out influxdb=http://k6:k6pass@influxdb:8086/k6 /scripts/test.js
+```
+
+- 10 VUs 시나리오
+```bash
+docker-compose -f docker-compose-k6.yml run --rm \
+  -e SCENARIO=flow_10vus \
+  k6 run --out influxdb=http://k6:k6pass@influxdb:8086/k6 /scripts/test.js
+```
+
+- 100 VUs 시나리오
+```bash
+docker-compose -f docker-compose-k6.yml run --rm \
+  -e SCENARIO=flow_100vus \
+  k6 run --out influxdb=http://k6:k6pass@influxdb:8086/k6 /scripts/test.js
+```
+
+- 300 VUs 시나리오
+```bash
+docker-compose -f docker-compose-k6.yml run --rm \
+  -e SCENARIO=flow_300vus \
+  k6 run --out influxdb=http://k6:k6pass@influxdb:8086/k6 /scripts/test.js
+```
 
 ### 테스트 결과
 
--
--
+- [Flow Iterations Link](https://snapshots.raintank.io/dashboard/snapshot/k4h45FVqWUgDUOsHXHMdPW02SzbHOnkv): 1회 실행, 300VUs
+    ![Flow Iterations Success](./assets/001-flow-iterations-success.png)
+  - 초기 데이터 세팅 및 API 정상 동작 검증을 목적으로 함
+  - 모든 API 결과 정상 응답
+    ![Flow Iterations 01](./assets/002-flow-iterations-grafana1.png)
+    ![Flow Iterations 02](./assets/003-flow-iterations-grafana2.png)
+  - **결과 요약**
+    - 총 1,801건 요청 중 실패 0건 (성공률 100%)
+    - 평균 응답 시간 `278ms`, 최대 `2.13s`
+    - `order_time` 평균이 `1,027ms`로 가장 길게 소요됨
+    - 동시 300명에서 초기 DB/Redis/쿠폰 정책 로딩은 정상 처리됨
+    - 다만 주문 생성(`createOrder`)에서 평균 응답 시간이 높음 → 주문 로직이 성능 병목 지점으로 확인됨
 
+
+- [Flow Ramping 10VUs Link](https://snapshots.raintank.io/dashboard/snapshot/x84XUCAgGJ7efa7Yq7How8Os5e12RDi4): 소규모 사용자(10명) 상황에서 지표 확인
+    ![Flow Ramping 10VUs Success](./assets/021-flow-ramping-10vus-success.png)
+  - 잔액 충전, 쿠폰 발급, 주문 생성 모두 정상 동작하고 있음
+    ![Flow Ramping 10VUs 01](./assets/022-flow-ramping-10vus-grafana1.png)
+    ![Flow Ramping 10VUs 02](./assets/023-flow-ramping-10vus-grafana2.png)
+  - **결과 요약**
+      - 총 4,489건 요청, 실패 0건
+      - 평균 응답 시간 `10ms`, `order_time` 평균 `39.9ms`
+      - 모든 지표 SLA(200ms 이내)를 충분히 만족
+      - 소규모 사용자 환경에서는 안정적 성능 제공
+      - 캐시 및 락 경합 부담이 미미한 수준
+
+
+- [Flow Ramping 100VUs Link](https://snapshots.raintank.io/dashboard/snapshot/FifD66GJjpCQChabGPfYY1ClIj5EdKWS): 중간 부하(100명) 상황에서 지표 확인 
+    ![Flow Ramping 100VUs Success](./assets/031-flow-ramping-100vus-success.png)
+  - 잔액 충전, 쿠폰 발급, 주문 생성 모두 정상 동작하고 있음
+    ![Flow Ramping 100VUs 01](./assets/032-flow-ramping-100vus-grafana1.png)
+    ![Flow Ramping 100VUs 02](./assets/033-flow-ramping-100vus-grafana2.png)
+  - **결과 요약**
+      - 총 45,307건 요청, 실패 0건
+      - 평균 응답 시간 `10.6ms`, `order_time` 평균 `50.9ms`
+      - `P95` 기준 응답 시간도 대부분 50~200ms 구간
+      - 100명 수준까지는 안정적으로 동작하며, `DB/Redis` 병목도 관찰되지 않음
+      - `SLA` 기준 충족 (95% 응답 <200ms)
+
+
+- [Flow Ramping 300VUs Link](https://snapshots.raintank.io/dashboard/snapshot/0n4hL64VL8yPGtg6ycokSWB60ufll9kS): 최종 목적 부하(300명) 상황에서 지표 확인
+    ![Flow Ramping 300VUs Fail](./assets/041-flow-ramping-300vus-fail.png)
+  - 3 스테이지 마지막 단계에서 `getUserId` 실패  - `99%(15579 성공 / 15 실패)`
+  - 2 스테이지 중간 부터 `createOrder`함수에서 주문 생성 실패 - `96%(15098 성공 / 478 실패)`
+  - 서버 에러로 `Multilock already unlocked` 에러 발생하여 주문 생성에 실패함
+  - 주문 요청의 과부하로 Redis 기반의 락 경합 부분에서 정상 동작하지 않을 것으로 예측됨
+  - 각 API 요청 중 가장 병목현상이 큰 `createOrder`에 대한 비동기적 처리 로직 필요
+    ![Flow Ramping 300VUs 01](./assets/042-flow-ramping-300vus-grafana1.png)
+    ![Flow Ramping 300VUs 02](./assets/043-flow-ramping-300vus-grafana2.png)
+  - **결과 요약**
+    - 총 94,136건 요청 중 535건 실패 (실패율 0.56%)
+    - 실패 구간: `getUserId`(13건), `getTopProducts`(6건), `createOrder`(516건)
+    - `order_time` 평균 `1,174ms`, 최대 `3,100ms`
+    - P95 기준 `~2.3s`, SLA 미충족
+    - 300명 동시 실행 시부터 실패가 발생
+    - 주요 실패 원인은 `createOrder`의 Redis 락 경합 및 서버 과부하
+    - DB/Redis 리소스는 응답은 유지하나, 락 처리 과정에서 지연 및 unlock 오류 발생
+    - 100VUs까지는 무리가 없으나, 300VUs에서는 인프라 스펙 및 락 처리 방식 한계에 도달한 것으로 판단
 
 ## 개선 및 병목 해결 방안
 
-- **DB Connection Pool**
+위 시나리오별로 사용자를 증가시켜 테스트 한 결과 100VUs 까지는 오류 없이 동작하다가, 300VUs 설정 시 실패하는 상황이 발생함. 단순 코드 상의 문제만이 아니라, 실행 환경의 리소스 부족에 의한 실패로 예상됨.
 
-  - 부하 테스트 시 커넥션 풀 부족 여부 모니터링
-  - 필요한 경우 max pool size 상향 및 idle timeout 조정
+### 개선 고려 사항
 
-- **Redis 락 처리**
+- 서버 스펙 및 인프라 레벨의 확장
+  - CPU 메모리 부족: 서버 인스턴스의 CPU 메모리가 급격히 증가되었을 가능성
+  - DB 커넥션 수: 어플리케이션에서 통과하더라도, DB단에서 서버 한계에 도달했을 가능성
+  - Redis 과부하: 요청이 몰려 Redis 기반의 락이 과부하로 정상 동작하지 못했을 가능성
+  - 서버 스펙을 증설, DB/Redis의 자원을 확장하는 방향이 가장 공수가 적고(비용이 있는) 개선 방법으로 판단됨
 
-  - 상품 재고, 쿠폰 발급에서 분산락 사용 → lock 경합으로 인한 지연 발생 가능성 점검
-  - 멀티락 조기 해제 문제 발생 시 락 범위 및 TTL 조정 고려
-
-- **애플리케이션 레벨 최적화**
-
-  - Coupon 발급 로직: 불필요한 DB round trip 제거, Redis TTL 조정
-  - Order 생성 로직: 비동기 처리 가능한 이벤트는 @TransactionalEventListener(AFTER\_COMMIT) 활용
-
-- **지표 기반 대응**
-
-  - `order_time` Trend에서 평균, P95 응답 시간 분석
-  - SLA 미충족 구간 발견 시 API 레벨 분리, CQRS 또는 캐시 도입 고려
-
-- **확장성 고려**
-
-  - 단일 정책에 집중된 쿠폰 발급 요청 → 여러 정책으로 분산하여 테스트 가능
-  - 상품 개수 확장 및 분산 조회 → Top N 상품 조회 성능 개선
+- 서버 에러 로그 구체화
+  - 도메인 레벨 뿐만 아니라, 시스템 상의 에러로그를 단순 500처리 하지 않고, 구체적으로 제공
+  
+- 재시도 로직 추가
+  - 서버에서의 실패가 외부로 노출되지 않도록 재시도 로직 추가
+  - 락 경합의 경우 재시도 로직을 추가해 주문 자체는 성공하도록 변경하여 사용자 경험 개선
 
 

@@ -1,69 +1,66 @@
 import { check, sleep } from "k6";
 import http from "k6/http";
-import { Counter, Rate, Trend } from "k6/metrics";
+import { Trend } from "k6/metrics";
 
-export const options = {
-  scenarios: {
-    // e_commerce_flow: {
-    //   executor: "per-vu-iterations",
-    //   vus: 300,
-    //   iterations: 1,
-    //   maxDuration: "1m",
-    // },
-    e_commerce_flow_ramping: {
+let scenarios = {};
+
+if (__ENV.SCENARIO === "flow_iterations") {
+  scenarios = {
+    flow_iterations: {
+      executor: "per-vu-iterations",
+      vus: 300,
+      iterations: 1,
+      maxDuration: "1m",
+    },
+  };
+} else if (__ENV.SCENARIO === "flow_10vus") {
+  scenarios = {
+    flow_10vus: {
       executor: "ramping-vus",
       startVUs: 0,
       stages: [
-        { duration: "1m", target: 100 },
-        { duration: "1m", target: 200 },
-        { duration: "1m", target: 300 },
-        { duration: "2m", target: 300 },
-        { duration: "30s", target: 0 },
+        { duration: "30s", target: 10 },
+        { duration: "1m", target: 10 },
+        { duration: "10s", target: 0 },
       ],
-      gracefulStop: "30s",
-      startTime: "10s",
-      // startTime: "1m",
+      gracefulStop: "10s",
     },
-    // flow_10vus: {
-    //   executor: "ramping-vus",
-    //   startVUs: 0,
-    //   stages: [
-    //     { duration: "30s", target: 10 },
-    //     { duration: "1m", target: 10 },
-    //     { duration: "10s", target: 0 },
-    //   ],
-    //   gracefulStop: "10s",
-    // },
-    // flow_100vus: {
-    //   executor: "ramping-vus",
-    //   startVUs: 0,
-    //   stages: [
-    //     { duration: "30s", target: 100 },
-    //     { duration: "1m", target: 100 },
-    //     { duration: "10s", target: 0 },
-    //   ],
-    //   gracefulStop: "10s",
-    //   startTime: "2m",
-    // },
-    // flow_300vus: {
-    //   executor: "ramping-vus",
-    //   startVUs: 0,
-    //   stages: [
-    //     { duration: "30s", target: 300 },
-    //     { duration: "2m", target: 300 },
-    //     { duration: "20s", target: 0 },
-    //   ],
-    //   gracefulStop: "20s",
-    //   startTime: "4m",
-    // },
-  },
-};
+  };
+} else if (__ENV.SCENARIO === "flow_100vus") {
+  scenarios = {
+    flow_100vus: {
+      executor: "ramping-vus",
+      startVUs: 0,
+      stages: [
+        { duration: "30s", target: 100 },
+        { duration: "1m", target: 100 },
+        { duration: "10s", target: 0 },
+      ],
+      gracefulStop: "10s",
+    },
+  };
+} else if (__ENV.SCENARIO === "flow_300vus") {
+  scenarios = {
+    flow_300vus: {
+      executor: "ramping-vus",
+      startVUs: 0,
+      stages: [
+        { duration: "30s", target: 300 },
+        { duration: "2m", target: 300 },
+        { duration: "20s", target: 0 },
+      ],
+      gracefulStop: "20s",
+    },
+  };
+}
+
+export const options = { scenarios };
 
 const BASE_URL = "http://host.docker.internal:8080";
 
-const httpFailures = new Rate("http_req_failed");
-const httpSuccess = new Rate("http_req_success");
-const requests = new Counter("http_reqs");
+// const httpFailures = new Rate("http_req_failed");
+// const httpSuccess = new Rate("http_req_success");
+// const requests = new Counter("http_reqs");
 
 // 성능 지표
 const chargeTime = new Trend("charge_balance_time");
@@ -75,7 +72,10 @@ const orderTime = new Trend("order_time");
 // DB 초기화
 export const setup = () => {
   const url = `${BASE_URL}/init`;
-  const res = http.post(url, null, { headers: { "Content-Type": "application/json" } });
+  const res = http.post(url, null, {
+    headers: { "Content-Type": "application/json" },
+    tags: { name: "0_setup_init_data" },
+  });
   check(res, { "init 200": (r) => r.status === 200 });
   const body = res.json();
   console.log("System initialized:", JSON.stringify(body));
@@ -87,7 +87,14 @@ const getUserIdByName = (vuName) => {
   const url = `${BASE_URL}/users/id?name=${vuName}`;
   const res = http.get(url, { tags: { name: "0_get_userId" } });
   trackMetrics(res);
-  check(res, { "getUserId 200": (r) => r.status === 200 });
+  check(res, {
+    "getUserId 200": (r) => {
+      if (r.status !== 200) {
+        console.error(`Unexpected user status: ${r.status}, body=${r.body}`);
+      }
+      return r.status === 200;
+    },
+  });
   return res.json();
 };
 
@@ -158,7 +165,14 @@ const createOrder = (userId, products, coupon) => {
   });
 
   trackMetrics(res, orderTime);
-  check(res, { "order 201": (r) => r.status === 201 });
+  check(res, {
+    "order 201": (r) => {
+      if (r.status !== 201) {
+        console.error(`Unexpected order status: ${r.status}, body=${r.body}`);
+      }
+      return r.status === 201;
+    },
+  });
   return res.json();
 };
 
@@ -181,7 +195,7 @@ const test = (data) => {
   const top5 = getTopProducts().slice(0, 5);
   if (top5.length > 0) {
     const order = createOrder(userId, top5, coupons?.[0]);
-    console.log(`User\t${userId}\torder:\t${order.orderId}\tcoupon:\t${coupons?.[0]?.couponId || ""}\t`);
+    // console.log(`User\t${userId}\torder:\t${order.orderId}\tcoupon:\t${coupons?.[0]?.couponId || ""}\t`);
   }
 };
 
@@ -189,9 +203,9 @@ const trackMetrics = (res, trendMetric) => {
   if (trendMetric) {
     trendMetric.add(res.timings.duration);
   }
-  httpFailures.add(res.status >= 400);
-  httpSuccess.add(res.status < 400);
-  requests.add(1);
+  // httpFailures.add(res.status >= 400);
+  // httpSuccess.add(res.status < 400);
+  // requests.add(1);
 };
 
 export default test;
