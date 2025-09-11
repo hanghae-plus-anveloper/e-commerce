@@ -567,7 +567,7 @@ docker-compose -f docker-compose-k6.yml run --rm \
 
 ### 테스트 결과
 
-- [Flow Iterations Link](https://snapshots.raintank.io/dashboard/snapshot/k4h45FVqWUgDUOsHXHMdPW02SzbHOnkv): 1회 실행, 300VUs
+- [Flow Iterations Grafana Link](https://snapshots.raintank.io/dashboard/snapshot/k4h45FVqWUgDUOsHXHMdPW02SzbHOnkv): 1회 실행, 300VUs
     ![Flow Iterations Success](./assets/001-flow-iterations-success.png)
   - 초기 데이터 세팅 및 API 정상 동작 검증을 목적으로 함
   - 모든 API 결과 정상 응답
@@ -581,7 +581,7 @@ docker-compose -f docker-compose-k6.yml run --rm \
     - 다만 주문 생성(`createOrder`)에서 평균 응답 시간이 높음 → 주문 로직이 성능 병목 지점으로 확인됨
 
 
-- [Flow Ramping 10VUs Link](https://snapshots.raintank.io/dashboard/snapshot/x84XUCAgGJ7efa7Yq7How8Os5e12RDi4): 소규모 사용자(10명) 상황에서 지표 확인
+- [Flow Ramping 10VUs Grafana Link](https://snapshots.raintank.io/dashboard/snapshot/x84XUCAgGJ7efa7Yq7How8Os5e12RDi4): 소규모 사용자(10명) 상황에서 지표 확인
     ![Flow Ramping 10VUs Success](./assets/021-flow-ramping-10vus-success.png)
   - 잔액 충전, 쿠폰 발급, 주문 생성 모두 정상 동작하고 있음
     ![Flow Ramping 10VUs 01](./assets/022-flow-ramping-10vus-grafana1.png)
@@ -594,7 +594,7 @@ docker-compose -f docker-compose-k6.yml run --rm \
       - 캐시 및 락 경합 부담이 미미한 수준
 
 
-- [Flow Ramping 100VUs Link](https://snapshots.raintank.io/dashboard/snapshot/FifD66GJjpCQChabGPfYY1ClIj5EdKWS): 중간 부하(100명) 상황에서 지표 확인 
+- [Flow Ramping 100VUs Grafana Link](https://snapshots.raintank.io/dashboard/snapshot/FifD66GJjpCQChabGPfYY1ClIj5EdKWS): 중간 부하(100명) 상황에서 지표 확인 
     ![Flow Ramping 100VUs Success](./assets/031-flow-ramping-100vus-success.png)
   - 잔액 충전, 쿠폰 발급, 주문 생성 모두 정상 동작하고 있음
     ![Flow Ramping 100VUs 01](./assets/032-flow-ramping-100vus-grafana1.png)
@@ -607,7 +607,7 @@ docker-compose -f docker-compose-k6.yml run --rm \
       - `SLA` 기준 충족 (95% 응답 <200ms)
 
 
-- [Flow Ramping 300VUs Link](https://snapshots.raintank.io/dashboard/snapshot/0n4hL64VL8yPGtg6ycokSWB60ufll9kS): 최종 목적 부하(300명) 상황에서 지표 확인
+- [Flow Ramping 300VUs Grafana Link](https://snapshots.raintank.io/dashboard/snapshot/0n4hL64VL8yPGtg6ycokSWB60ufll9kS): 최종 목적 부하(300명) 상황에서 지표 확인
     ![Flow Ramping 300VUs Fail](./assets/041-flow-ramping-300vus-fail.png)
   - 3 스테이지 마지막 단계에서 `getUserId` 실패  - `99%(15579 성공 / 15 실패)`
   - 2 스테이지 중간 부터 `createOrder`함수에서 주문 생성 실패 - `96%(15098 성공 / 478 실패)`
@@ -797,7 +797,7 @@ docker-compose -f docker-compose-k6.yml run --rm \
 
 ### 추가 테스트 결과 - 멀티락 로직 개선 성공 ✅
 
-- [Flow Ramping 300VUs Link - Order 실패 개선](https://snapshots.raintank.io/dashboard/snapshot/WrPCHT1sLipXqaS5HBUJebDzxvNahF7v)
+- [Flow Ramping 300VUs Grafana Link - Order 실패 개선](https://snapshots.raintank.io/dashboard/snapshot/WrPCHT1sLipXqaS5HBUJebDzxvNahF7v)
   ![Flow Ramping 300vus Fail 3](./assets/061-flow-ramping-300vus-semi-success.png)
   - `createOrder` 실패 없어짐
   - `getUserId` 99%(18180 성공 / 10 실패)
