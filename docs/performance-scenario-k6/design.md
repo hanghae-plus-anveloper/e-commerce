@@ -613,7 +613,7 @@ docker-compose -f docker-compose-k6.yml run --rm \
   - 2 스테이지 중간 부터 `createOrder`함수에서 주문 생성 실패 - `96%(15098 성공 / 478 실패)`
   - 서버 에러로 `Multilock already unlocked` 에러 발생하여 주문 생성에 실패함
   - 주문 요청의 과부하로 Redis 기반의 락 경합 부분에서 정상 동작하지 않을 것으로 예측됨
-  - 각 API 요청 중 가장 병목현상이 큰 `createOrder`에 대한 비동기적 처리 로직 필요
+  - 각 API 요청 중 가장 병목현상이 큰 `createOrder`에 대한 로직 개선 필요
     ![Flow Ramping 300VUs 01](./assets/042-flow-ramping-300vus-grafana1.png)
     ![Flow Ramping 300VUs 02](./assets/043-flow-ramping-300vus-grafana2.png)
   - **결과 요약**
@@ -624,11 +624,10 @@ docker-compose -f docker-compose-k6.yml run --rm \
     - 300명 동시 실행 시부터 실패가 발생
     - 주요 실패 원인은 `createOrder`의 Redis 락 경합 및 서버 과부하
     - DB/Redis 리소스는 응답은 유지하나, 락 처리 과정에서 지연 및 unlock 오류 발생
-    - 100VUs까지는 무리가 없으나, 300VUs에서는 인프라 스펙 및 락 처리 방식 한계에 도달한 것으로 판단
 
 ## 개선 및 병목 해결 방안
 
-위 시나리오별로 사용자를 증가시켜 테스트 한 결과 100VUs 까지는 오류 없이 동작하다가, 300VUs 설정 시 실패하는 상황이 발생함. 단순 코드 상의 문제만이 아니라, 실행 환경의 리소스 부족에 의한 실패로 예상됨.
+위 시나리오별로 사용자를 증가시켜 테스트 한 결과 100VUs 까지는 오류 없이 동작하다가, 300VUs 설정 시 실패하는 상황이 발생함. 단순 코드 상의 문제만 인지, 실행 환경의 리소스 부족에 의한 실패 인지 확인이 필요함.
 
 ### 개선 고려 사항
 
@@ -640,9 +639,178 @@ docker-compose -f docker-compose-k6.yml run --rm \
 
 - 서버 에러 로그 구체화
   - 도메인 레벨 뿐만 아니라, 시스템 상의 에러로그를 단순 500처리 하지 않고, 구체적으로 제공
+  - 에러 로그의 원인인 Multilock이 사용되는 코드 개선
   
 - 재시도 로직 추가
   - 서버에서의 실패가 외부로 노출되지 않도록 재시도 로직 추가
   - 락 경합의 경우 재시도 로직을 추가해 주문 자체는 성공하도록 변경하여 사용자 경험 개선
+
+## 병목 개선 
+
+멀티락 에러가 출력되는 createOrder 관련하여 서버 환경 리소스를 확장하고, 멀티락 로직을 개선
+
+### DB 설정 변경
+
+- [docker-compose.yml](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docker-compose.yml): MySQL Docker 에 세부 설정 추가
+  ```yml
+  version: '3.8'
+
+  services:
+    mysql:
+      image: mysql:8.0
+      container_name: hhplus-mysql
+      ports:
+        - "3306:3306"
+      environment:
+        MYSQL_ROOT_PASSWORD: root
+        MYSQL_USER: application
+        MYSQL_PASSWORD: application
+        MYSQL_DATABASE: hhplus
+      command: # 설정 추가
+        --max_connections=1000 # 동시 접속자 수 
+        --innodb_buffer_pool_size=2G # InnoDB 버퍼 풀 크기
+        --innodb_log_file_size=512M # Redo Log 파일 크기
+        --innodb_flush_log_at_trx_commit=2 # 트랜잭션 로그 플러시 정책
+        --innodb_flush_method=O_DIRECT # 파일 IO 최적화
+        --innodb_thread_concurrency=0 # 동시 쓰레드 제한, 0: CPU 기반
+        --innodb_read_io_threads=8 # 읽기 IO 스레드 수
+        --innodb_write_io_threads=8 # 쓰기 IO 스레드 수
+        --performance_schema=OFF # Performance Schema 비활성화
+        --skip-name-resolve # DNS 역조회 비활성화
+      volumes:
+        - ./data/mysql:/var/lib/mysql
+      networks:
+        - hhplus-network
+      restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            cpus: "2.0"
+            memory: 4g
+          reservations:
+            cpus: "1.0"
+            memory: 2g
+
+  volumes:
+    mysql_data:
+
+  networks:
+    hhplus-network:
+      driver: bridge
+
+  ```
+  
+- [application.yml](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/resources/application.yml): Hikari 설정 변경
+
+  ```yml
+  spring:
+    application:
+      name: hhplus
+    profiles:
+      active: local
+
+    datasource:
+      name: HangHaePlusDataSource
+      type: com.zaxxer.hikari.HikariDataSource
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 50 # 리소스 증가
+        minimum-idle: 10
+        connection-timeout: 30_000 # 30초 (DB 커넥션을 가져오지 못하면 예외 발생)
+        max-lifetime: 1_800_000 # 30분 (커넥션 최대 생존 시간)
+        keepalive-time: 300_000
+        initialization-fail-timeout: 0
+
+  # /* ... */
+  ```
+
+### 추가 테스트 결과 - DB 성능 증가 효과 없음
+
+![Flow Ramping 300vus Fail 2](./assets/051-flow-ramping-300vus-fail.png)
+- 설정 변경 효과 없음
+  ![Flow Ramping 300vus Fail Grafana 2 01](./assets/052-flow-ramping-300vus-grafana1.png)
+  ![Flow Ramping 300vus Fail Grafana 2 02](./assets/053-flow-ramping-300vus-grafana2.png)
+  - DB 성능 확장보다 근본적인 문제 접근이 필요함
+
+### 에러 원인 직접 수정
+
+#### 기존 멀티락 로직
+
+- 주문 생성이 있는 OrderFacade의 주요 로직에서 `DistributedLock`을 사용중에 있음
+  ```java
+  @Component
+  @RequiredArgsConstructor
+  public class OrderFacade {
+      /* ... */
+      @Transactional
+      @DistributedLock(prefix = LockKey.PRODUCT, ids = "#orderItems.![productId]")
+      public Order placeOrder(Long userId, List<OrderItemCommand> orderItems, Long couponId) {
+        /* ... */
+      }
+  }
+  ```
+  - 초기 구현 시에는 `productId` 뿐만 아니라, `couponId`나 `userId`까지 멀티락으로 사용했으나, 
+  - 낙관적락과 조건부 업데이트 적용방식으로 변경하면서 `productId`만 멀티락으로 남게 됨
+
+#### 수정된 멀티락 로직
+
+- [OrderFacade.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/order/facade/OrderFacade.java): `DistributedLock` 제거
+  ```java
+  @Component
+  @RequiredArgsConstructor
+  public class OrderFacade {
+    @Transactional
+    // @DistributedLock(prefix = LockKey.PRODUCT, ids = "#orderItems.![productId]") // 제거
+    public Order placeOrder(Long userId, List<OrderItemCommand> orderItems, Long couponId) {
+        User user = userService.findById(userId);
+
+        List<OrderItem> items = productService.reserveProducts(orderItems).stream()
+                .map(r -> OrderItem.of(r.getProduct(), r.getPrice(), r.getQuantity(), 0))
+                .toList();
+        
+        /* ... */
+    }
+  }
+  ```
+- [ProductService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/application/ProductService.java): items를 받아서 재고를 차감하는 동안에만 `DistributedLock` 적용
+  ```java
+  @Service
+  @RequiredArgsConstructor
+  public class ProductService {
+    /* ... */
+
+    @Transactional
+    @DistributedLock(prefix = LockKey.PRODUCT, ids = "#orderItems.![productId]") // ProductService에서만 상품 멀티락 사용
+    public List<ProductReservation> reserveProducts(List<OrderItemCommand> orderItems) {
+      return orderItems.stream()
+          .sorted(Comparator.comparing(OrderItemCommand::getProductId))
+          .map(command -> {
+            Product product = verifyAndDecreaseStock(command.getProductId(), command.getQuantity());
+            return new ProductReservation(product, product.getPrice(), command.getQuantity());
+          })
+          .toList();
+    }
+  }
+  ```
+  - 트랜젝션 내에서 락이 동작하는 부분을 `Product`를 사용하는 곳으로 범위를 축소
+  - 나머지 `OrderFacade`의 `User`, `Coupon`, `Balance`와 분리
+
+### 추가 테스트 결과 - 멀티락 로직 개선 성공 ✅
+
+- [Flow Ramping 300VUs Link - Order 실패 개선](https://snapshots.raintank.io/dashboard/snapshot/WrPCHT1sLipXqaS5HBUJebDzxvNahF7v)
+  ![Flow Ramping 300vus Fail 3](./assets/061-flow-ramping-300vus-semi-success.png)
+  - `createOrder` 실패 없어짐
+  - `getUserId` 99%(18180 성공 / 10 실패)
+  - `claimCoupon` 99%(18178 성공 / 2 실패)
+    ![Flow Ramping 300vus Fail 3 Grafana 01](./assets/062-flow-ramping-300vus-grafana1.png)
+    ![Flow Ramping 300vus Fail 3 Grafana 02](./assets/063-flow-ramping-300vus-grafana2.png)
+    - 주문 요청에 대한 오류는 완전히 사라짐
+
+## 결론
+
+- 처음 300VUs에서 주문의 실패하는 요인은 로직상에 멀티락을 불필요하게 크게 잡는 것이 원인이었으며, 상품에 대한 멀티락을 상품을 차감하는 로직에 국한하여 개선하였음.
+- 성능 측정을 300VUs까지 올려서 테스트 하지 않았다면 식별하지 못했을 수도 있는 코드상의 오류를 테스트를 통해 확인하고, 이를 개선함.
+- 추후 getUserId, claimCoupon도 동일한 방식으로 에러 로그를 확인하고 개선예정
+  - 
 
 
