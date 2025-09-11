@@ -1,5 +1,8 @@
 package kr.hhplus.be.server.product.application;
 
+import kr.hhplus.be.server.common.lock.DistributedLock;
+import kr.hhplus.be.server.common.lock.LockKey;
+import kr.hhplus.be.server.order.facade.OrderItemCommand;
 import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.product.domain.ProductRepository;
 import kr.hhplus.be.server.product.exception.ProductNotFoundException;
@@ -7,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -41,5 +45,17 @@ public class ProductService {
         }
         return productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException("상품을 찾을 수 없습니다."));
+    }
+
+    @Transactional
+    @DistributedLock(prefix = LockKey.PRODUCT, ids = "#orderItems.![productId]")
+    public List<ProductReservation> reserveProducts(List<OrderItemCommand> orderItems) {
+        return orderItems.stream()
+                .sorted(Comparator.comparing(OrderItemCommand::getProductId))
+                .map(command -> {
+                    Product product = verifyAndDecreaseStock(command.getProductId(), command.getQuantity());
+                    return new ProductReservation(product, product.getPrice(), command.getQuantity());
+                })
+                .toList();
     }
 }

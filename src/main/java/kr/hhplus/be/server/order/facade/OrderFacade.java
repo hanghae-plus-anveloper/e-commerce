@@ -3,15 +3,12 @@ package kr.hhplus.be.server.order.facade;
 import kr.hhplus.be.server.balance.application.BalanceService;
 import kr.hhplus.be.server.common.event.order.OrderCompletedEvent;
 import kr.hhplus.be.server.common.event.order.OrderLineSummary;
-import kr.hhplus.be.server.common.lock.DistributedLock;
-import kr.hhplus.be.server.common.lock.LockKey;
 import kr.hhplus.be.server.coupon.application.CouponService;
 import kr.hhplus.be.server.coupon.domain.Coupon;
 import kr.hhplus.be.server.order.application.OrderService;
 import kr.hhplus.be.server.order.domain.Order;
 import kr.hhplus.be.server.order.domain.OrderItem;
 import kr.hhplus.be.server.product.application.ProductService;
-import kr.hhplus.be.server.product.domain.Product;
 import kr.hhplus.be.server.user.application.UserService;
 import kr.hhplus.be.server.user.domain.User;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +16,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.List;
 
 @Component
@@ -35,17 +31,12 @@ public class OrderFacade {
     // private final TopProductService topProductService;
 
     @Transactional
-    @DistributedLock(prefix = LockKey.PRODUCT, ids = "#orderItems.![productId]")
+    // @DistributedLock(prefix = LockKey.PRODUCT, ids = "#orderItems.![productId]")
     public Order placeOrder(Long userId, List<OrderItemCommand> orderItems, Long couponId) {
         User user = userService.findById(userId);
 
-        List<OrderItem> items = orderItems.stream()
-                .sorted(Comparator.comparing(OrderItemCommand::getProductId)) // 상품 순서 정렬
-                .map(command -> {
-                    Product product = productService.verifyAndDecreaseStock(command.getProductId(),
-                            command.getQuantity());
-                    return OrderItem.of(product, product.getPrice(), command.getQuantity(), 0);
-                })
+        List<OrderItem> items = productService.reserveProducts(orderItems).stream()
+                .map(r -> OrderItem.of(r.getProduct(), r.getPrice(), r.getQuantity(), 0))
                 .toList();
 
         int total = items.stream()
