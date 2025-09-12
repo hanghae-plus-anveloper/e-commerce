@@ -24,7 +24,6 @@ public class OrderController implements OrderApi {
         List<OrderItemCommand> commands = OrderCommandMapper.toCommandList(request.getItems());
 
         Order order = orderFacade.placeOrder(request.getUserId(), commands, request.getCouponId());
-
         OrderResponseDto dto = new OrderResponseDto(order.getId(), order.getTotalAmount());
         return ResponseEntity.status(201).body(dto);
     }

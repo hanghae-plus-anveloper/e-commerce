@@ -15,15 +15,13 @@ import java.util.stream.Collectors;
 public class CouponRedisRepository {
 
     private final StringRedisTemplate redisTemplate;
+    private static final String POLICY_KEY_PREFIX = "COUPON:POLICY:";
 
     public List<Long> getAllPolicyIds() {
-        Set<String> keys = redisTemplate.keys("COUPON:POLICY:*:REMAINING");
+        Set<String> keys = redisTemplate.keys(POLICY_KEY_PREFIX + "*:REMAINING");
         if (keys == null) return List.of();
 
-        return keys.stream()
-                .map(key -> key.split(":")[2])
-                .map(Long::parseLong)
-                .toList();
+        return keys.stream().map(key -> key.split(":")[2]).map(Long::parseLong).toList();
     }
 
     public void setRemainingCount(Long policyId, int remainingCount) {
@@ -36,22 +34,24 @@ public class CouponRedisRepository {
         redisTemplate.delete(CouponRedisKey.issuedKey(policyId));
     }
 
+    public void removePolicyAll() {
+        Set<String> keys = redisTemplate.keys(POLICY_KEY_PREFIX + "*");
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
+    }
+
     public List<Long> peekPending(Long policyId, int count) {
-        Set<ZSetOperations.TypedTuple<String>> tuples =
-                redisTemplate.opsForZSet().rangeWithScores(CouponRedisKey.pendingKey(policyId), 0, count - 1);
+        Set<ZSetOperations.TypedTuple<String>> tuples = redisTemplate.opsForZSet().rangeWithScores(CouponRedisKey.pendingKey(policyId), 0, count - 1);
 
         if (tuples == null) return List.of();
 
-        return tuples.stream()
-                .map(ZSetOperations.TypedTuple::getValue)
-                .map(Long::valueOf)
-                .collect(Collectors.toList());
+        return tuples.stream().map(ZSetOperations.TypedTuple::getValue).map(Long::valueOf).collect(Collectors.toList());
     }
 
     public void removePending(Long policyId, List<Long> userIds) {
         if (userIds.isEmpty()) return;
-        redisTemplate.opsForZSet()
-                .remove(CouponRedisKey.pendingKey(policyId), userIds.stream().map(String::valueOf).toArray());
+        redisTemplate.opsForZSet().remove(CouponRedisKey.pendingKey(policyId), userIds.stream().map(String::valueOf).toArray());
     }
 
     public void removePendingKey(Long policyId) {
@@ -67,10 +67,10 @@ public class CouponRedisRepository {
         return true;
     }
 
-    private long getRandScore () {
+    private long getRandScore() {
         int rand = ThreadLocalRandom.current().nextInt(0, 1000);
         String randStr = String.format("%03d", rand); // "001" ~ "999"
-        return  Long.parseLong(System.currentTimeMillis() + randStr);
+        return Long.parseLong(System.currentTimeMillis() + randStr);
     }
 
     public void clearAll() {

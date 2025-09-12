@@ -63,7 +63,7 @@ public class DistributedLockAspect {
 
         List<RLock> lockList = lockKeys.stream()
                 .map(redissonClient::getLock)
-                .collect(Collectors.toList());
+                .toList();
         RedissonMultiLock multiLock = new RedissonMultiLock(lockList.toArray(new RLock[0]));
 
         try {

@@ -22,7 +22,9 @@ public class Balance {
 
     @JsonBackReference
     @OneToOne
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @JoinColumn(name = "user_id", nullable = false, unique = true,
+            foreignKey = @ForeignKey(name = "fk_balance_user",
+            foreignKeyDefinition = "FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE"))
     private User user;
 
     @Column(nullable = false)

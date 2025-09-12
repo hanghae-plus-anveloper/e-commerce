@@ -114,4 +114,10 @@ public interface CouponApi {
 
     @GetMapping("/users/{userId}/coupons")
     ResponseEntity<List<CouponResponseDto>> getUserCoupons(@PathVariable @Min(1) Long userId);
+
+    @PostMapping("/coupons/async")
+    ResponseEntity<String> tryClaimCoupon(
+            @RequestParam @Min(1) Long userId,
+            @RequestParam @Min(1) Long policyId
+    );
 }
