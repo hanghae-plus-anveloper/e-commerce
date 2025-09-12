@@ -781,13 +781,18 @@ docker-compose -f docker-compose-k6.yml run --rm \
     @Transactional
     // @DistributedLock(prefix = LockKey.PRODUCT, ids = "#orderItems.![productId]") // 제거
     public Order placeOrder(Long userId, List<OrderItemCommand> orderItems, Long couponId) {
-        User user = userService.findById(userId);
+      User user = userService.findById(userId);
 
-        List<OrderItem> items = productService.reserveProducts(orderItems).stream()
-                .map(r -> OrderItem.of(r.getProduct(), r.getPrice(), r.getQuantity(), 0))
-                .toList();
+      List<ProductReservationRequest> requests = orderItems.stream()
+          .map(i -> new ProductReservationRequest(i.getProductId(), i.getQuantity()))
+          .toList();
+
+      // reserveProducts 함수 내에서 락 진행
+      List<OrderItem> items = productService.reserveProducts(requests).stream()
+          .map(r -> OrderItem.of(r.getProduct(), r.getPrice(), r.getQuantity(), 0))
+          .toList();
         
-        /* ... */
+      /* ... */
     }
   }
   ```
@@ -799,13 +804,13 @@ docker-compose -f docker-compose-k6.yml run --rm \
     /* ... */
 
     @Transactional
-    @DistributedLock(prefix = LockKey.PRODUCT, ids = "#orderItems.![productId]") // ProductService에서만 상품 멀티락 사용
-    public List<ProductReservation> reserveProducts(List<OrderItemCommand> orderItems) {
-      return orderItems.stream()
-          .sorted(Comparator.comparing(OrderItemCommand::getProductId))
-          .map(command -> {
-            Product product = verifyAndDecreaseStock(command.getProductId(), command.getQuantity());
-            return new ProductReservation(product, product.getPrice(), command.getQuantity());
+    @DistributedLock(prefix = LockKey.PRODUCT, ids = "#requests.![productId]")
+    public List<ProductReservation> reserveProducts(List<ProductReservationRequest> requests) {
+      return requests.stream()
+          .sorted(Comparator.comparing(ProductReservationRequest::productId))
+          .map(request -> {
+              Product product = verifyAndDecreaseStock(request.productId(), request.quantity());
+              return new ProductReservation(product, product.getPrice(), request.quantity());
           })
           .toList();
     }

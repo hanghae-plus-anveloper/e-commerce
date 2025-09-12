@@ -1,5 +1,11 @@
 package kr.hhplus.be.server.order.facade;
 
+import java.util.List;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
 import kr.hhplus.be.server.balance.application.BalanceService;
 import kr.hhplus.be.server.common.event.order.OrderCompletedEvent;
 import kr.hhplus.be.server.common.event.order.OrderLineSummary;
@@ -8,15 +14,11 @@ import kr.hhplus.be.server.coupon.domain.Coupon;
 import kr.hhplus.be.server.order.application.OrderService;
 import kr.hhplus.be.server.order.domain.Order;
 import kr.hhplus.be.server.order.domain.OrderItem;
+import kr.hhplus.be.server.product.application.ProductReservationRequest;
 import kr.hhplus.be.server.product.application.ProductService;
 import kr.hhplus.be.server.user.application.UserService;
 import kr.hhplus.be.server.user.domain.User;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -35,7 +37,11 @@ public class OrderFacade {
     public Order placeOrder(Long userId, List<OrderItemCommand> orderItems, Long couponId) {
         User user = userService.findById(userId);
 
-        List<OrderItem> items = productService.reserveProducts(orderItems).stream()
+        List<ProductReservationRequest> requests = orderItems.stream()
+                .map(i -> new ProductReservationRequest(i.getProductId(), i.getQuantity()))
+                .toList();
+
+        List<OrderItem> items = productService.reserveProducts(requests).stream()
                 .map(r -> OrderItem.of(r.getProduct(), r.getPrice(), r.getQuantity(), 0))
                 .toList();
 
@@ -49,7 +55,6 @@ public class OrderFacade {
             discount = coupon.getDiscountRate() > 0
                     ? (int) (total * coupon.getDiscountRate())
                     : coupon.getDiscountAmount();
-            // total = Math.max(0, total - discount);
         }
 
         balanceService.useBalance(user, total);
@@ -60,8 +65,6 @@ public class OrderFacade {
                 .map(i -> new OrderLineSummary(i.getProduct().getId(), i.getQuantity()))
                 .toList();
 
-        // 비동기로 요청 > 이벤트 방식으로 수정예정
-        // topProductService.recordOrdersAsync(rankingDtos);
         eventPublisher.publishEvent(new OrderCompletedEvent(order.getId(), userId, lines));
 
         return order;
