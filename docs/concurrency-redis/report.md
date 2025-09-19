@@ -9,7 +9,7 @@
 ## `OrderFacadeConcurrencyTest` 통합 테스트 목적
 
 - 사용자 및 상품의 갯수가 충분할 때, 모든 주문이 정상적으로 성공해야 한다.
-- [OrderFacadeConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/order/facade/OrderFacadeConcurrencyTest.java)
+- [OrderFacadeConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/test/java/kr/hhplus/be/server/order/facade/OrderFacadeConcurrencyTest.java)
 
 ### 조건
 
@@ -89,10 +89,10 @@
 
 ### 분산락 커스텀 어노테이션 구현
 
-- [DistributedLock.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/common/lock/DistributedLock.java): 분산락 적용을 위한 커스텀 어노테이션
-  - `prefix`: 도메인 별 `lock`을 획득하기 위한 `key` ([LockKey.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/common/lock/LockKey.java))
+- [DistributedLock.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/common/lock/DistributedLock.java): 분산락 적용을 위한 커스텀 어노테이션
+  - `prefix`: 도메인 별 `lock`을 획득하기 위한 `key` ([LockKey.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/common/lock/LockKey.java))
   - `ids`: 멀티 키를 위한 `id`배열, 주로 `PK`를 사용
-- [DistributedLockAspect.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/common/lock/DistributedLockAspect.java): 커스텀 어노테이션 기반 AOP 구현 클래스 
+- [DistributedLockAspect.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/common/lock/DistributedLockAspect.java): 커스텀 어노테이션 기반 AOP 구현 클래스 
   - `@Order(Ordered.HIGHEST_PRECEDENCE)`: **최우선 순위 보장**
     -  기본 `@Transactional`은 `LOWEST_PRECEDENCE`로 등록됨
   - `lock`함수: @DistributedLock 어노테이션이 붙은 메서드를 실행하기 전 후로, 분산락 처리
@@ -176,7 +176,7 @@
 
 ### 분산락 적용
 
-- [OrderFacade.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/order/facade/OrderFacade.java): 커스컴 AOP 적용
+- [OrderFacade.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/order/facade/OrderFacade.java): 커스컴 AOP 적용
   - `OrderFacade`에서 사용되는 `Product, Coupon, Balance, Order` 중 다른 사용자와 경합이 많이 발생하는 `Product`로 분산락 적용함
   - `Coupon, Balance, Order` 기존 DB락으로 유지
   - 로직 변경없이 `@DistributedLock` 적용 
@@ -207,7 +207,7 @@
 
 ### 조건부 업데이트 쿼리 수정
 
-- [ProductRepository.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/domain/ProductRepository.java): 조건부 업데이트 쿼리
+- [ProductRepository.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/product/domain/ProductRepository.java): 조건부 업데이트 쿼리
   - 비관적 락에서 조건부 업데이트 쿼리로 수정
   - 분산락에서 `productId` 단위로 직렬화를 보장하기 때문에, DB 업데이트 시 원자적 차감만을 이용하여 성능적 이점을 확보함
     ```java
@@ -224,7 +224,7 @@
         int decreaseStockIfAvailable(@Param("id") Long id, @Param("qty") int qty);
     }
     ```
-- [ProductService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/application/ProductService.java)
+- [ProductService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/product/application/ProductService.java)
   - `verifyAndDecreaseStock` 내부 로직 변경
     ```java
     @Service
@@ -259,7 +259,7 @@
 ## TestContainer 세팅
 
 ### @Profile("test") 테스트 환경 세팅
-- [IntegrationTestContainersConfig.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/IntegrationTestContainersConfig.java)
+- [IntegrationTestContainersConfig.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/test/java/kr/hhplus/be/server/IntegrationTestContainersConfig.java)
   - 기존에 있던 MySQL 테스트 컨테이너와 병합
   - 단일 Redis를 컨테이너에 띄우고, 기본 포트 6379로 매핑함
     ```java
@@ -298,7 +298,7 @@
 ## `CouponFacadeConcurrencyTest` 쿠폰 선착순 발급 통합 테스트 목적
 
 - 쿠폰의 정해진 개수 만큼만 쿠폰이 발급되어야 한다.
-- [CouponFacadeConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/coupon/facade/CouponFacadeConcurrencyTest.java)
+- [CouponFacadeConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/test/java/kr/hhplus/be/server/coupon/facade/CouponFacadeConcurrencyTest.java)
 
 ### 조건
 

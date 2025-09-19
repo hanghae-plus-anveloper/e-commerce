@@ -54,7 +54,7 @@
 
 ### 조건
 
-- [TopProductRedisServiceTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/analytics/application/TopProductRedisServiceTest.java)
+- [TopProductRedisServiceTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/test/java/kr/hhplus/be/server/analytics/application/TopProductRedisServiceTest.java)
 - 사용자는 1명으로 고정하여 순수하게 상품과 판매 수량만 집계되는 정보로 통제
 - 잔액이나 상품의 수량은 충분하여 주문이 실패하지 않음
 - 과거 1~3일 전의 데이터는 `setUp` 단계에서 미리 세팅(Product 1번 제외)
@@ -114,7 +114,7 @@
 
 ### Redis 저장 함수 / 집계 로직 구현 
 
-- [TopProductRedisService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/analytics/application/TopProductRedisService.java)
+- [TopProductRedisService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/analytics/application/TopProductRedisService.java)
 - 주문이 발생할 때 Redis에 반영하기 위한 `TopProductRedisService` 구현
   - 기존 DB 쿼리 기반인 `TopProductQueryService`와 분리하여 구현했습니다.
   - `OrderFacade`에서 사용하는 계층으로 기존 `analytics/application`에 위치시켰습니다.
@@ -201,7 +201,7 @@
 
 ### 주문 생성 시 Redis 저장 로직 구현
 
-- [OrderFacade.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/order/facade/OrderFacade.java) 수정
+- [OrderFacade.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/order/facade/OrderFacade.java) 수정
   - 주문 생성 이후 (트랜젝션 내에서) redis에 비동기 적으로 저장하도록 요청 
     - 기존에 repository에 주문을 저장하면서 return 하는 부분은 order로 담아두고,
     - items 배열에서 ProductId와 quantity만 사용하여 `topProductRedisService`에 비동기로 요청합니다.    
@@ -226,7 +226,7 @@
   - 현재 상태는 트랜젝션 내부에서 실행중이므로, 커밋이 보장되지 않을 수 있음 
   - `Transactional Outbox` 패턴을 추후에 적용하여 이벤트 방식으로 수정 필요
 
-- [TopProductRedisService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/analytics/application/TopProductRedisService.java)
+- [TopProductRedisService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/analytics/application/TopProductRedisService.java)
   - `recordOrdersAsync` 함수 추가
     - `@Async` 어노테이션을 사용하기 위해 OrderFacade 외부에 선언 필요
     - 배열을 받아서 `Redis`에 저장하되, 저장 시마다 `try {} catch (ignored){}` 로 에러가 반환되지 않도록 구현

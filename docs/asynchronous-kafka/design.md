@@ -105,7 +105,7 @@
 
 ## 기능 구현
 
-- [CouponService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponService.java): `CouponService.tryIssue` 이벤트 발행 추가
+- [CouponService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/coupon/application/CouponService.java): `CouponService.tryIssue` 이벤트 발행 추가
   ```java
   public boolean tryIssue(Long userId, Long policyId) {
     boolean accepted = couponRedisRepository.tryIssue(userId, policyId);
@@ -117,7 +117,7 @@
   ```
   - Redis에 쿠폰 발급 요청 적재 시 **적재됨** 이벤트 발행
 
-- [CouponWorker.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponWorker.java)
+- [CouponWorker.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/coupon/application/CouponWorker.java)
   ```java
   // 확정처리는 Kafka로 이전
   // @Scheduled(fixedDelay = 1000) // 1초마다 실행
@@ -125,7 +125,7 @@
   ```
   - 기존 배치 스케쥴러는 제외처리
 
-- [KafkaTopics.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/kafka/KafkaTopics.java): 토픽 변경
+- [KafkaTopics.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/kafka/KafkaTopics.java): 토픽 변경
   ```java
   @Bean
   NewTopic couponPendedTopic(
@@ -137,17 +137,17 @@
   ```
   - coupon-issued나 coupon-issue-requested 보단 현재 상태인 pended 사실 기반으로 변경
 
-- [CouponPendedEvent.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/common/event/coupon/CouponPendedEvent.java)
+- [CouponPendedEvent.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/common/event/coupon/CouponPendedEvent.java)
   ```java
   public record CouponPendedEvent(Long userId, Long policyId) {} 
   ```
 
-- [CouponPendedMessage.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/kafka/message/OrderCompletedMessage.java)
+- [CouponPendedMessage.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/kafka/message/OrderCompletedMessage.java)
   ```java
   public record CouponPendedMessage(Long userId, Long policyId, Instant requestedAt) {}
   ```
 
-- [OrderCompletedKafkaPublisher.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/kafka/publisher/OrderCompletedKafkaPublisher.java)
+- [OrderCompletedKafkaPublisher.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/kafka/publisher/OrderCompletedKafkaPublisher.java)
   ```java
   @Slf4j
   @Component
@@ -179,7 +179,7 @@
     - RedisRepository는 트랜젝션이 아니어서 직접 발행해도 될 것으로 보이나, 
     - 분리 시 로깅이나 메세지 발행 재시도 로직을 넣기에 용이할것으로 보여 구성
 
-- [KafkaCouponConsumerConfig.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/kafka/config/KafkaCouponConsumerConfig.java)
+- [KafkaCouponConsumerConfig.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/kafka/config/KafkaCouponConsumerConfig.java)
   ```java
   @EnableKafka
   @Configuration
@@ -216,7 +216,7 @@
     - Producer의 타입헤더가 불일치하더라도 무시가능, 보안 리스크 경감
     - 메세지 스키마 고정으로 일관성 유지, 다른 컨슈머와 섞이지 않음
 
-- [CouponIssueKafkaConsumer.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/kafka/consumer/CouponIssueKafkaConsumer.java) 
+- [CouponIssueKafkaConsumer.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/kafka/consumer/CouponIssueKafkaConsumer.java) 
   ```java
   @Slf4j
   @Component
@@ -248,7 +248,7 @@
 
 ### 조건
 
-- [CouponServiceKafkaTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/coupon/application/CouponServiceKafkaTest.java)
+- [CouponServiceKafkaTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/test/java/kr/hhplus/be/server/coupon/application/CouponServiceKafkaTest.java)
 - 4개의 정책을 설정하고, 각각의 발급 수량을 200로 제한하여, 각 쿠폰 정책별 1000번의 요청을 시도한다.
 - 800건의 kafka 메세지 발행을 확인한다.
 
