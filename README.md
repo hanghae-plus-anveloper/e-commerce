@@ -1,4 +1,4 @@
-# HHPlus E-Commerce (Java Backend)
+# E-Commerce (Java Backend)
 
 > Java Spring Boot 기반 전자상거래 백엔드 서비스.  
 > 사용자, 상품, 쿠폰, 잔액, 주문을 중심으로 도메인 주도 설계(DDD)와 계층형 아키텍처를 적용한 프로젝트입니다.   
@@ -8,7 +8,7 @@
 
 ## 목차
 
-- [HHPlus E-Commerce (Java Backend)](#hhplus-e-commerce-java-backend)
+- [E-Commerce (Java Backend)](#e-commerce-java-backend)
   - [목차](#목차)
   - [프로젝트 개요](#프로젝트-개요)
   - [아키텍처 및 설계](#아키텍처-및-설계)
@@ -31,7 +31,7 @@
 
 ## 프로젝트 개요
 
-HHPlus E-Commerce Java 백엔드 서비스는 다음 기능들을 제공합니다:
+E-Commerce Java 백엔드 서비스는 다음 기능들을 제공합니다:
 
 - 사용자 조회 및 관리
 - 잔액(Balance) 조회, 충전, 사용
