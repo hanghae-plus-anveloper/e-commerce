@@ -3,7 +3,7 @@
 ## 1. 상품 재고 차감
 
 - 상품의 재고 10개에 대하여 20개의 요청, 5개의 요청에서 요청만큼 재고가 차감, 초과 차감은 되지 않도록 보장
-- [ProductServiceConcurrencyTest](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/test/java/kr/hhplus/be/server/product/application/ProductServiceConcurrencyTest.java)
+- [ProductServiceConcurrencyTest](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/test/java/kr/hhplus/be/server/product/application/ProductServiceConcurrencyTest.java)
 
 <details><summary>주요 테스트 코드</summary>
 
@@ -72,8 +72,8 @@
 
 ### 동시성 제어 구현
   - `@Lock(LockModeType.PESSIMISTIC_WRITE)` 비관적 락 적용, Service 코드 수정
-  - [ProductRepository.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/product/domain/ProductRepository.java)
-  - [ProductService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/product/application/ProductService.java)
+  - [ProductRepository.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/product/domain/ProductRepository.java)
+  - [ProductService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/product/application/ProductService.java)
 
 <details><summary>주요 구현 코드</summary>
 
@@ -116,7 +116,7 @@
 - 발급 수량이 `3개`인 쿠폰 정책(`CouponPolicy`)에 대하여 `10`개의 스레드로 동시요청 하는 경우, 쿠폰이 초과 발급 되지 않도록 보장
 - 경쟁 조건이 발생하는 지와 트랜젝션에 의한 데드락을 확인하고, `@Version`이나 `@Modifying` 쿼리로 제거가 가능 한지 검증
   - 이전 주차에 이미 `@Version`을 적용하여 해당 부분은 주석처리하고 테스트 코드 작성
-- [CouponFacadeConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/test/java/kr/hhplus/be/server/coupon/facade/CouponFacadeConcurrencyTest.java)
+- [CouponFacadeConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/test/java/kr/hhplus/be/server/coupon/facade/CouponFacadeConcurrencyTest.java)
 
 <details><summary>주요 테스트 코드</summary>
 
@@ -191,8 +191,8 @@
 ### 동시성 제어 구현
   - `@Version`을 주석 해제하는 것만으로도 테스트가 통과되는 것을 확인함
   - 추가적인 학습을 위해 `@Modifying` 쿼리를 통한 제어를 구현하여 테스트
-  - [CouponPolicyRepository.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/coupon/domain/CouponPolicyRepository.java)
-  - [CouponService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponService.java)
+  - [CouponPolicyRepository.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/coupon/domain/CouponPolicyRepository.java)
+  - [CouponService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/coupon/application/CouponService.java)
 
 <details><summary>주요 구현 코드</summary>
 
@@ -256,7 +256,7 @@
 - 사용자 한명에게 발급된 쿠폰 하나에 대한 10개의 동시 요청 중 1개만 성공하도록 보장
 - `used = true` 값이 무조건 반환되어 단순 결과값만으로는 확인 불가
 - 10회 요청 중 성공과 예외처리를 카운트 하여 경쟁 상태를 확인
-- [CouponServiceConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/test/java/kr/hhplus/be/server/coupon/application/CouponServiceConcurrencyTest.java)
+- [CouponServiceConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/test/java/kr/hhplus/be/server/coupon/application/CouponServiceConcurrencyTest.java)
 
 <details><summary>주요 테스트 코드</summary>
 
@@ -325,8 +325,8 @@
 ### 동시성 제어 구현
 
 - @Modifying 쿼리를 통한 낙관적 동시성 제어 구현
-- [CouponRepository.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/coupon/domain/CouponRepository.java)
-- [CouponService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponService.java)
+- [CouponRepository.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/coupon/domain/CouponRepository.java)
+- [CouponService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/coupon/application/CouponService.java)
 
 <details><summary>주요 구현 코드</summary>
 
@@ -375,7 +375,7 @@
 ## 4. 잔액 차감 - 주문 중복 요청 & 5. 잔액 충전 및 사용 - 주문과 충전의 충돌, 충전 동시 요청 (테스트 실패)
 
 - 사용자 한명에 대하여 잔액의 차감이 중복으로 발생하거나, 충전과 사용이 동시에 진행되지 않도록 보장
-- [BalanceServiceConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/test/java/kr/hhplus/be/server/balance/application/BalanceServiceConcurrencyTest.java)
+- [BalanceServiceConcurrencyTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/test/java/kr/hhplus/be/server/balance/application/BalanceServiceConcurrencyTest.java)
 
 <details><summary>주요 테스트 코드(동시성 문제 확인 실패)</summary>
 
@@ -447,8 +447,8 @@
 ### 동시성 제어 구현
 
 - `@Version` 낙관적 락 적용, 요청 중 하나만 성공해도 로직상 문제 없음
-- [Balance.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/balance/domain/Balance.java)
-- [BalanceService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/balance/application/BalanceService.java)
+- [Balance.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/balance/domain/Balance.java)
+- [BalanceService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/balance/application/BalanceService.java)
 
 <details><summary>주요 구현 코드</summary>
 

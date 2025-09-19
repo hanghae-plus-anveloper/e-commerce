@@ -122,7 +122,7 @@ sequenceDiagram
 
 ### 조건
 
-- [CouponRedisServiceTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/test/java/kr/hhplus/be/server/coupon/application/CouponRedisServiceTest.java)
+- [CouponRedisServiceTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/test/java/kr/hhplus/be/server/coupon/application/CouponRedisServiceTest.java)
 - 1000개가 가용한 쿠폰에 대하여 사용자 요청은 2000개 수행
 - 사용자 요청은 200개씩 10번 동시요청으로 수행(ms 값 중복 발생 테스트용)
   - 워커는 500개씩 처리시켜볼 예정이고, ms + 랜덤숫자는 3자리 숫자 001~999까지 부여할 예정입니다.
@@ -196,7 +196,7 @@ sequenceDiagram
 
 ### 클래스 별 기는 상세
 
-- [CouponRedisKey.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponRedisKey.java)
+- [CouponRedisKey.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/coupon/application/CouponRedisKey.java)
   - Key를 일관성 있게 관리하기 위한 유틸리티 클래스
   - 쿠폰 정책별로 남은 수량(REMAINING), 대기열(PENDING), 발급 완료(ISSUED) 키를 생성
     ```java
@@ -223,7 +223,7 @@ sequenceDiagram
       - Redis의 SET 구조를 사용하며, 중복 발급 차단과 이력 관리에 활용됩니다.
 
 
-- [CouponRedisService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponRedisService.java)
+- [CouponRedisService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/coupon/application/CouponRedisService.java)
   - 쿠폰 발급 요청이 Redis를 통해 처리될 수 있도록 지원하는 서비스 계층
     - 기존 `CouponFacade`에서의 요청을 처리하던 CouponService(DB) 대신에 발급 성공/실패 여부를 미리 반환합니다.   
   - 발급 요청을 Redis에 기록하고, Worker가 처리할 수 있도록 데이터를 관리하는 역할을 수행
@@ -327,7 +327,7 @@ sequenceDiagram
     - `clearAll()`
       - 테스트나 초기화 시 모든 쿠폰 정책 관련 Redis Key를 정리합니다.
 
-- [CouponWorker.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponWorker.java)
+- [CouponWorker.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/coupon/application/CouponWorker.java)
   - Redis에 쌓인 대기열(PENDING) 을 주기적으로 처리하여 DB에 발급을 확정하는 역할을 수행
   - DB를 주기적으로 조회하여 현재 유효한 정책 목록으로 Redis의 정책-남은 수량을 업데이트
   - Redis를 주기적으로 조회하여 PENDING 상태의 쿠폰 발급 요청을 특정 수만큼 가져와 순차적으로 쿠폰 발급
@@ -401,7 +401,7 @@ sequenceDiagram
       - 각 사용자에 대해 `CouponService.issueCoupon`을 호출하여 DB에 발급 확정
       - 처리된 요청은 `ZSET`에서 제거
 
-- [CouponService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponService.java) 기능 추가/변경
+- [CouponService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/coupon/application/CouponService.java) 기능 추가/변경
   ```java
   @Transactional(readOnly = true)
   public List<CouponPolicy> getActivePolicies() {
@@ -418,7 +418,7 @@ sequenceDiagram
   - DB에서 유효한 정책 조회 함수 추가 
   - issueCoupon 호출 시 User → UserId로 변경 
   
-- [Coupon.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/coupon/domain/Coupon.java) 변경
+- [Coupon.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/coupon/domain/Coupon.java) 변경
   - JPA 매핑 방식 변경
     - Redis 에서 userId와 policyId 만으로 조회하기 용이하도록, 연관관계 매핑에서 FK 식별자로 직접 매핑으로 리팩토링
   - 변경전

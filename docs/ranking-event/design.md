@@ -39,14 +39,14 @@
 
 ### 이벤트 관련 클래스 구현
 
-- [OrderCompletedEvent.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/common/event/OrderCompletedEvent.java)
+- [OrderCompletedEvent.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/common/event/OrderCompletedEvent.java)
   ```java
   public record OrderCompletedEvent(Long orderId, Long userId, List<OrderLineSummary> lines) {
   }
   ```
   - 주문 생성 성공 이벤트
 
-- [TopProductEventHandler.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/analytics/application/TopProductEventHandler.java)
+- [TopProductEventHandler.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/analytics/application/TopProductEventHandler.java)
   ```java
   @Component
   @RequiredArgsConstructor
@@ -64,7 +64,7 @@
   - `AFTER_COMMIT` 에 의해 트랜젝션이 커밋 되고 나서 이벤트 동작으로 구현
   - 주문 생성 함수의 `OrderCompletedEvent`를 수집하여 `TopProductService`에 집계 요청
 
-- [TopProductService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/analytics/application/TopProductService.java)
+- [TopProductService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/analytics/application/TopProductService.java)
   ```java
   @Service
   @RequiredArgsConstructor
@@ -88,7 +88,7 @@
   - 상품 번호 및 수량 배열로 RedisRepository에 기록
   - 주문 번호 기록
 
-- [TopProductRedisRepository.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/analytics/infrastructure/TopProductRedisRepository.java)
+- [TopProductRedisRepository.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/analytics/infrastructure/TopProductRedisRepository.java)
   ```java
   @Repository
   @RequiredArgsConstructor
@@ -140,7 +140,7 @@
 
 ### 외부 전송 Mock 핸들러 구현
 
-- [OrderExternalEventHandler.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/external/mock/application/OrderExternalEventHandler.java)
+- [OrderExternalEventHandler.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/external/mock/application/OrderExternalEventHandler.java)
   - `OrderExternalEventHandler` 외부 Mock API 핸들러: 호출 결과를 Redis에 기록
     ```java
     @Slf4j
@@ -168,7 +168,7 @@
     }
     ```
 
-- [OrderExternalRedisRepository.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/external/mock/infrastructure/OrderExternalRedisRepository.java)
+- [OrderExternalRedisRepository.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/main/java/kr/hhplus/be/server/external/mock/infrastructure/OrderExternalRedisRepository.java)
   ```java
   @Repository
   @RequiredArgsConstructor
@@ -197,7 +197,7 @@
 
 - Mock 핸들러의 구현 난이도가 낮아 순위 집계 핸들러에 이어서 기능 구현 후 추가 테스트를 작성했습니다.
 
-- [TopProductServiceRedisTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/test/java/kr/hhplus/be/server/analytics/application/TopProductServiceRedisTest.java)
+- [TopProductServiceRedisTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/main/src/test/java/kr/hhplus/be/server/analytics/application/TopProductServiceRedisTest.java)
   - 첫 번째 테스트는 위 내용에 포함되어있습니다.
   - 추가 테스트 조건은 10번 상품을 등록하고 주문하여, 5위에 집계 되는지, 외부 전송 주문이 기록되는 지 확인했습니다.
   ```java
