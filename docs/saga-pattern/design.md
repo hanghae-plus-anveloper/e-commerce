@@ -160,9 +160,9 @@ stateDiagram-v2
 
 ### 상태 저장소 구성
 
-- [OrderSagaRepository](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/saga/domain/OrderSagaRepository.java): Saga 상태 저장소
-- [OrderSagaEventStatus](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/saga/domain/OrderSagaEventStatus.java) (enum: PENDING, SUCCESS, FAILED, CANCELED, RESTORED)
-- [OrderSagaState](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/saga/domain/OrderSagaState.java): 주문 Saga 상태값
+- [OrderSagaRepository](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/saga/domain/OrderSagaRepository.java): Saga 상태 저장소
+- [OrderSagaEventStatus](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/saga/domain/OrderSagaEventStatus.java) (enum: PENDING, SUCCESS, FAILED, CANCELED, RESTORED)
+- [OrderSagaState](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/saga/domain/OrderSagaState.java): 주문 Saga 상태값
   <details><summary>주요 코드</summary>
   
   ```java
@@ -256,7 +256,7 @@ stateDiagram-v2
 
 ### Saga 상태 머신 핸들러
 
-- [OrderSagaHandler](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/saga/application/OrderSagaHandler.java): Saga의 상태 관리 메타 데이터 및 부가 정보 관리
+- [OrderSagaHandler](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/saga/application/OrderSagaHandler.java): Saga의 상태 관리 메타 데이터 및 부가 정보 관리
   <details><summary>주요 코드</summary>
   
   ```java
@@ -380,7 +380,7 @@ stateDiagram-v2
 
 ### 주문 생성 주체
 
-- [OrderCommandService](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/order/application/OrderCommandService.java): 주문 초기값 생성
+- [OrderCommandService](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/order/application/OrderCommandService.java): 주문 초기값 생성
   <details><summary>주요 코드</summary>
   
   ```java
@@ -412,7 +412,7 @@ stateDiagram-v2
   ```
   </details>
 
-- [OrderEventHandler](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/order/application/OrderEventHandler.java): OrderSagaHandler에 의해 발행된 OrderRequestedEvent 감지하여 `OrderStatus.PENDING`으로 전환
+- [OrderEventHandler](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/order/application/OrderEventHandler.java): OrderSagaHandler에 의해 발행된 OrderRequestedEvent 감지하여 `OrderStatus.PENDING`으로 전환
   <details><summary>주요코드</summary>
   
   ```java
@@ -460,7 +460,7 @@ stateDiagram-v2
 ### 각 도메인별 핸들러 및 테스트
 
 - Product
-  - [ProductCommandService](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/application/ProductCommandService.java): 상품 재고 차감/원복 비즈니스 로직
+  - [ProductCommandService](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/product/application/ProductCommandService.java): 상품 재고 차감/원복 비즈니스 로직
     <details><summary>주요 코드</summary>
     
     ```java
@@ -524,7 +524,7 @@ stateDiagram-v2
   - `ProductEventHandler`: 상품 차감 및 원가 반환
   - `ProductCompensationHandler`: 차감된 상품 재고 보상
 - Coupon
-  - [CouponCommandService](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponCommandService.java): 쿠폰 사용/원복 비즈니스 로직
+  - [CouponCommandService](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/coupon/application/CouponCommandService.java): 쿠폰 사용/원복 비즈니스 로직
     <details><summary>주요 코드</summary>
   
     ```java
@@ -574,7 +574,7 @@ stateDiagram-v2
   - `CouponEventHandler`: 쿠폰 사용 및 할인액 반환
   - `CouponCompensationHandler`: 사용된 쿠폰 원복 보상
   - Balance
-  - [BalanceCommandService](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/balance/application/BalanceCommandService.java): 잔액 차감/원복 비즈니스 로직
+  - [BalanceCommandService](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/balance/application/BalanceCommandService.java): 잔액 차감/원복 비즈니스 로직
     <details><summary>주요 코드</summary>
 
     ```java

@@ -127,7 +127,7 @@ docker compose -f docker-compose-kafka.yml exec kafka \
 
 ### 주요 코드
 
-- [OrderCompletedMessage.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/kafka/message/OrderCompletedMessage.java)
+- [OrderCompletedMessage.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/kafka/message/OrderCompletedMessage.java)
   ```java
   public record OrderCompletedMessage(
           String orderId,
@@ -140,7 +140,7 @@ docker compose -f docker-compose-kafka.yml exec kafka \
   ```
   - 주문완료 시 kafka에 적재할 메세지 스키마
 
-- [KafkaTopics.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/kafka/KafkaTopics.java)
+- [KafkaTopics.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/kafka/KafkaTopics.java)
   ```java
   @Component
   public class KafkaTopics {
@@ -167,7 +167,7 @@ docker compose -f docker-compose-kafka.yml exec kafka \
     - 로컬 테스트용으로 replicas 1 지정, 실제로는 3 이상 필요,
   - 심화과제를 위해 `couponIssuedTopic` 함께 작성
 
-- [OrderCompletedKafkaPublisher.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/kafka/publisher/OrderCompletedKafkaPublisher.java)
+- [OrderCompletedKafkaPublisher.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/kafka/publisher/OrderCompletedKafkaPublisher.java)
   ```java
   @Slf4j
   @Component
@@ -242,7 +242,7 @@ public class IntegrationTestContainersConfig {
 
 ### 메세지 발행 테스트
 
-- [TopProductServiceRedisTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/analytics/application/TopProductServiceRedisTest.java)
+- [TopProductServiceRedisTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/test/java/kr/hhplus/be/server/analytics/application/TopProductServiceRedisTest.java)
   - 기존 Redis 검증용 테스트 파일에 테스트 항목(`kafkaMessageProduced`)을 하나 더 추가했습니다.
 
 - 검증용 테스트 Consumer 추가

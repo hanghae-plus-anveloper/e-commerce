@@ -189,8 +189,8 @@ kr.hhplus.be.server
 1. 코드 클론:
 
     ```bash
-    git clone https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java.git
-    cd hhplus-e-commerce-java
+    git clone https://github.com/hanghae-plus-anveloper/e-commerce.git
+    cd e-commerce
     ```
 
 2. 환경 파일 설정:

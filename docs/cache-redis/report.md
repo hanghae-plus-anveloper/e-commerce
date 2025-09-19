@@ -44,7 +44,7 @@
 
 ### 통합 테스트 코드 및 Top Products 조회 계층 배치
 
-- [TopProductQueryServiceTest.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/test/java/kr/hhplus/be/server/analytics/application/TopProductQueryServiceTest.java)
+- [TopProductQueryServiceTest.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/test/java/kr/hhplus/be/server/analytics/application/TopProductQueryServiceTest.java)
   - 테스트 흐름
     - 더미 상품을 6가지 생성 후 3일 치 주문 아이템 생성 저장
       - 1번부터 6번까지 총 수량이 적어지는 방향으로 3일에 각각 나눠서 생성
@@ -99,7 +99,7 @@
 
 ### 상품 조회 로직 구현
 
-- [TopProductNativeRepository.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/analytics/domain/TopProductNativeRepository.java)
+- [TopProductNativeRepository.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/analytics/domain/TopProductNativeRepository.java)
   - 시작일자, 종료일자, 획득할 상품수를 받아 상위 상품 목록을 반환하는 함수 구현
    
     ![조회 성공 1](./assets/002-top-products-success-no-cache.png)
@@ -111,11 +111,11 @@
 
 ### Cache 환경 설정
 
-- [RadissonCacheConfig.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/config/redis/RadissonCacheConfig.java)
+- [RadissonCacheConfig.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/config/redis/RadissonCacheConfig.java)
   - cacheManager 를 Bean으로 등록하여 cacheName 별 TTL 설정
   - CacheNames.TOP_PRODUCTS는 자정을 기준으로 초기화 하기 위해, 캐시된 시간으로부터 자정 + 지터값을 적용하여 TTL에 설정, maxIdleTime은 0으로 비활성(자정까지 유지)
-- [CacheNames.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/common/cache/CacheNames.java): cacheName 상수
-- [CacheKey.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/common/cache/CacheKey.java)
+- [CacheNames.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/common/cache/CacheNames.java): cacheName 상수
+- [CacheKey.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/common/cache/CacheKey.java)
   - 캐시 키 ENUM 값
   - "CACHE:TOP_PRODUCTS", "CACHE:PRODUCT", "CACHE:BALANCE"처럼 고정된 Prefix를 Enum 상수로 정의.
   - key(Object... parts) 메서드로 prefix 뒤에 여러 파라미터를 붙여 최종 캐시 키 문자열 생성.
@@ -123,7 +123,7 @@
 
 ### 캐싱 구현
 
-- [TopProductQueryService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/analytics/application/TopProductQueryService.java)
+- [TopProductQueryService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/analytics/application/TopProductQueryService.java)
   - `@CacheConfig(cacheNames = CacheNames.TOP_PRODUCTS)` 클래스 레벨 지정하여, 각 함수에서 생략
   - 기본 기능 `top5InLast3Days` 는 확장 가능한 `topNLastNDays`함수를 호출하되, 클래스 내부에서 호출하므로, 각각 `@Cacheable`을 적용
   - `top5InLast3Days`는 3일 5개로 고정된 키 발행, `topNLastNDays`는 파라미터에 의해 발행

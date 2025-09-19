@@ -89,7 +89,7 @@
   - 특이사항: 마지막 업데이트가 5년 전
 
 - 방법 2: docker-compose-k6.yml 직접 작성, latest 버전 사용 ✅
-  -  [docker-compose-k6.yml](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docker-compose-k6.yml)
+  -  [docker-compose-k6.yml](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/docker-compose-k6.yml)
     
       <details><summary>세부 코드</summary>
 
@@ -162,7 +162,7 @@ docker-compose -f docker-compose-k6.yml run --rm k6 \
 
 ## 테스트 코드
 
-- [scripts/test.js](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/scripts/test.js): 페르소나 A형(충동 구매형) 사용자에 대한 테스트 작성
+- [scripts/test.js](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/scripts/test.js): 페르소나 A형(충동 구매형) 사용자에 대한 테스트 작성
 
 ### 테스트 시나리오 옵션 및 측정 값 세팅
 
@@ -294,7 +294,7 @@ export const setup = () => {
 - 쿠폰 정책은 테스트 실행 시 5개를 생성하고, 생서된 policyIds를 setup 함수에서 반환 받아서 테스트에 사용
 - 상품 정보의 경우 1~5번 상품을 생성하고, 이에 대한 redis에 Top5 상위 주문을 미리 세팅
 
-- [BootDataInitializer.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/boot/BootDataInitializer.java)
+- [BootDataInitializer.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/boot/BootDataInitializer.java)
 
     <details><summary>DB 세팅 코드</summary>
 
@@ -670,7 +670,7 @@ docker-compose -f docker-compose-k6.yml run --rm \
 
 ### DB 설정 변경 - 해결방법 X
 
-- [docker-compose.yml](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/docker-compose.yml): MySQL Docker 에 세부 설정 추가
+- [docker-compose.yml](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/docker-compose.yml): MySQL Docker 에 세부 설정 추가
   ```yml
   version: '3.8'
 
@@ -719,7 +719,7 @@ docker-compose -f docker-compose-k6.yml run --rm \
 
   ```
   
-- [application.yml](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/resources/application.yml): Hikari 설정 변경
+- [application.yml](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/resources/application.yml): Hikari 설정 변경
 
   ```yml
   spring:
@@ -773,7 +773,7 @@ docker-compose -f docker-compose-k6.yml run --rm \
 
 #### 수정된 멀티락 로직
 
-- [OrderFacade.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/order/facade/OrderFacade.java): `DistributedLock` 제거
+- [OrderFacade.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/order/facade/OrderFacade.java): `DistributedLock` 제거
   ```java
   @Component
   @RequiredArgsConstructor
@@ -796,7 +796,7 @@ docker-compose -f docker-compose-k6.yml run --rm \
     }
   }
   ```
-- [ProductService.java](https://github.com/hanghae-plus-anveloper/hhplus-e-commerce-java/blob/develop/src/main/java/kr/hhplus/be/server/product/application/ProductService.java): items를 받아서 재고를 차감하는 동안에만 `DistributedLock` 적용
+- [ProductService.java](https://github.com/hanghae-plus-anveloper/e-commerce/blob/develop/src/main/java/kr/hhplus/be/server/product/application/ProductService.java): items를 받아서 재고를 차감하는 동안에만 `DistributedLock` 적용
   ```java
   @Service
   @RequiredArgsConstructor
